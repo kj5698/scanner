@@ -124,6 +124,12 @@ input{font:inherit}
             <input value="{{ svcForm.status }}" onChange="{{ onSvcStatus }}" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0">
           </label>
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <div style="font-size:12px;color:#6b675e;margin-right:2px">Status:</div>
+          <sc-for list="{{ svcStatusOpts }}" as="so" hint-placeholder-count="4">
+            <button onClick="{{ so.pick }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ so.border }};background:{{ so.bg }};color:{{ so.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ so.label }}</button>
+          </sc-for>
+        </div>
         <sc-if value="{{ svcForm.error }}" hint-placeholder-val="{{ false }}">
           <div style="font-size:13px;color:oklch(0.45 0.16 28)">{{ svcForm.error }}</div>
         </sc-if>
@@ -254,6 +260,9 @@ input{font:inherit}
                 <div style="flex:1;min-width:0">
                   <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500">{{ r.name }}</div>
                   <div style="font-size:12px;color:#6b675e">{{ r.kind }}</div>
+                  <sc-if value="{{ r.hasStatus }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:{{ r.stBg }};color:{{ r.stFg }}">{{ r.statusText }}</div>
+                  </sc-if>
                 </div>
                 <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:{{ r.countColor }}">{{ r.count }}</div>
                 <sc-if value="{{ r.check }}" hint-placeholder-val="{{ false }}">
@@ -398,6 +407,9 @@ input{font:inherit}
                   <div style="flex:1;min-width:0">
                     <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500">{{ r.name }}</div>
                     <div style="font-size:12px;color:#6b675e">{{ r.kind }}</div>
+                  <sc-if value="{{ r.hasStatus }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:{{ r.stBg }};color:{{ r.stFg }}">{{ r.statusText }}</div>
+                  </sc-if>
                   </div>
                   <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:{{ r.countColor }}">{{ r.count }}</div>
                 <sc-if value="{{ r.check }}" hint-placeholder-val="{{ false }}">
@@ -432,6 +444,11 @@ input{font:inherit}
                 <button onClick="{{ f.pick }}" style="height:34px;padding:0 12px;white-space:nowrap;flex:none;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
               </sc-for>
             </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b675e">Sort
+              <select value="{{ invSortVal }}" onChange="{{ onInvSort }}" style="height:36px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
+                <sc-for list="{{ invSortOpts }}" as="so" hint-placeholder-count="0"><option value="{{ so.v }}">{{ so.label }}</option></sc-for>
+              </select>
+            </label>
             <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;overflow:hidden">
               <sc-for list="{{ invList }}" as="i" hint-placeholder-count="5">
                 <button onClick="{{ i.open }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:12px 14px;border:none;border-bottom:1px solid #eeebe4;background:#fff;cursor:pointer;color:#1c1b18;font-family:'IBM Plex Sans'">
@@ -655,6 +672,11 @@ input{font:inherit}
             <button onClick="{{ f.pick }}" style="height:34px;padding:0 12px;white-space:nowrap;flex:none;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
           </sc-for>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b675e">Sort
+              <select value="{{ sales.sortVal }}" onChange="{{ sales.onSort }}" style="height:36px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
+                <sc-for list="{{ sales.sortOpts }}" as="so" hint-placeholder-count="0"><option value="{{ so.v }}">{{ so.label }}</option></sc-for>
+              </select>
+            </label>
         <div style="display:flex;align-items:baseline;gap:8px;font-size:13px;color:#55524a">
           <div style="flex:1;min-width:0">{{ sales.listTitle }}</div>
           <div style="font:600 14px 'IBM Plex Mono';color:#1c1b18">{{ sales.listTotal }}</div>
@@ -666,6 +688,13 @@ input{font:inherit}
                 <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;line-height:1.3;word-break:break-all">{{ i.id }}</div>
                 <div style="font-size:12px;color:#6b675e">{{ i.sub }}</div>
                 <div style="font-size:11px;color:#6b675e;margin-top:2px">{{ i.delivery }}</div>
+                <sc-if value="{{ i.hasSvc }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
+                    <sc-for list="{{ i.svcs }}" as="sv" hint-placeholder-count="2">
+                      <div style="padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:{{ sv.bg }};color:{{ sv.fg }}">{{ sv.label }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none">
                 <div style="font:600 14px 'IBM Plex Mono'">{{ i.amount }}</div>
@@ -753,11 +782,11 @@ const SAMPLE = {
     { 'UPC': '735080001128', 'Model': 'HOSEKIT' }
   ],
   servicesold: [
-    { 'ID': '1', 'InvoiceNumber': '10231', 'ServiceID': 'DEL', 'Amount': '49.00', 'STATUS': 'Open' },
-    { 'ID': '2', 'InvoiceNumber': '10231', 'ServiceID': 'INST', 'Amount': '129.00', 'STATUS': 'Open' },
+    { 'ID': '1', 'InvoiceNumber': '10231', 'ServiceID': 'DEL', 'Amount': '49.00', 'STATUS': 'Paid' },
+    { 'ID': '2', 'InvoiceNumber': '10231', 'ServiceID': 'INST', 'Amount': '129.00', 'STATUS': 'Complete' },
     { 'ID': '3', 'InvoiceNumber': '10232', 'ServiceID': 'DEL', 'Amount': '49.00', 'STATUS': 'Open' },
     { 'ID': '4', 'InvoiceNumber': '10234', 'ServiceID': 'DEL', 'Amount': '49.00', 'STATUS': 'Open' },
-    { 'ID': '5', 'InvoiceNumber': '10234', 'ServiceID': 'HAUL', 'Amount': '25.00', 'STATUS': 'Open' },
+    { 'ID': '5', 'InvoiceNumber': '10234', 'ServiceID': 'HAUL', 'Amount': '25.00', 'STATUS': 'Pending' },
     { 'ID': '6', 'InvoiceNumber': '10235', 'ServiceID': 'DEL', 'Amount': '49.00', 'STATUS': 'Open' }
   ],
   services: [
@@ -770,6 +799,18 @@ const C = {
   green: 'oklch(0.52 0.13 150)', red: 'oklch(0.54 0.17 28)', amber: 'oklch(0.58 0.13 70)', ink: '#1c1b18',
   pill: { Complete: ['oklch(0.92 0.05 150)', 'oklch(0.38 0.1 150)'], Partial: ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'], Ready: ['oklch(0.93 0.04 255)', 'oklch(0.4 0.12 255)'], Loaded: ['oklch(0.93 0.05 300)', 'oklch(0.4 0.12 300)'], Delivering: ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'], Open: ['#ebe8e1', '#4a473f'], Services: ['#ebe8e1', '#4a473f'] }
 };
+const svcColor = st => { const s = String(st || '').toLowerCase();
+  if (!s) return ['#ebe8e1', '#6b675e'];
+  if (/unpaid|not paid|owe|due/.test(s)) return ['oklch(0.93 0.05 27)', 'oklch(0.42 0.15 27)'];
+  if (/cancel|void|refund|declin|fail/.test(s)) return ['oklch(0.93 0.05 27)', 'oklch(0.42 0.15 27)'];
+  if (/paid/.test(s)) return ['oklch(0.92 0.05 150)', 'oklch(0.38 0.1 150)'];
+  if (/complete|done|install|deliver|finish|closed/.test(s)) return ['oklch(0.93 0.04 255)', 'oklch(0.4 0.12 255)'];
+  if (/pend|progress|sched|wait|hold/.test(s)) return ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'];
+  return ['#ebe8e1', '#4a473f'];
+};
+const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
+const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
+const saveSort = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const TEAMC = ['oklch(0.5 0.14 255)', 'oklch(0.52 0.15 320)', 'oklch(0.55 0.14 50)', 'oklch(0.5 0.12 180)'];
 const hav = (a, b) => { const R = 3958.8, r = Math.PI / 180, dA = (b[0] - a[0]) * r, dO = (b[1] - a[1]) * r; const x = Math.sin(dA / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dO / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
 const fmtMins = m => m < 60 ? Math.round(m) + ' min' : Math.floor(m / 60) + ' h ' + Math.round(m % 60) + ' min';
@@ -787,7 +828,8 @@ class Component extends DCLogic {
   state = {
     url: localStorage.getItem('scanchk.url') || '', urlDraft: localStorage.getItem('scanchk.url') || '',
     demo: !localStorage.getItem('scanchk.url'), data: null, loading: false, err: '',
-    tab: 'scan', scans: [], locked: null, flash: null, cam: false, manual: '', q: '', invQ: '', invFilter: 'Open', invScope: 'day', salesPeriod: 'today', salesPay: 'All', salesQ: '',
+    tab: 'scan', scans: [], locked: null, flash: null, cam: false, manual: '', q: '', invQ: '', invFilter: 'Open', invScope: 'day', invSort: (() => { try { return localStorage.getItem('scanchk.invSort') || ''; } catch (e) { return ''; } })(),
+    salesSort: (() => { try { return localStorage.getItem('scanchk.salesSort') || 'new'; } catch (e) { return 'new'; } })(), salesPeriod: 'today', salesPay: 'All', salesQ: '',
     detail: null, settings: false,
     day: localStorage.getItem('scanchk.day') || 'today', routeSel: null, mode: 'load', proof: null,
     session: localStorage.getItem('scanchk.session') || '', me: (() => { try { return JSON.parse(localStorage.getItem('scanchk.me') || 'null'); } catch (e) { return null; } })(),
@@ -1446,7 +1488,8 @@ class Component extends DCLogic {
     const cat = this.state.data.cat || {};
     o.services.forEach(s => rows.push({
       name: cat[M(s.sid)] ? s.sid + ' · ' + cat[M(s.sid)] : s.sid,
-      kind: ['Service', s.amount, s.status].filter(Boolean).join(' · '),
+      kind: ['Service', s.amount ? (/^\s*\$/.test(s.amount) ? s.amount : '$' + s.amount) : ''].filter(Boolean).join(' · '),
+      hasStatus: true, statusText: s.status || 'No status', stBg: svcColor(s.status)[0], stFg: svcColor(s.status)[1],
       count: '', mark: '✓', boxBg: '#9a958a', boxBorder: 'none', countColor: '#6b675e',
       edit: () => this.openSvcForm(o.id, s),
       remove: () => { this.openSvcForm(o.id, s); this.setSvc({ confirmDel: true }); }
@@ -1531,10 +1574,14 @@ class Component extends DCLogic {
       saveSvc: () => this.svcAction(st.svcForm && st.svcForm.isNew ? 'add' : 'update'),
       deleteSvc: () => this.svcAction('delete'),
       closeSvc: () => this.setState({ svcForm: null }),
+      svcStatusOpts: (() => { const cur = st.svcForm ? String(st.svcForm.status || '').trim() : '';
+        const seen = d ? Array.from(d.invoices.values()).flatMap(o => o.services.map(x => String(x.status || '').trim())).filter(Boolean) : [];
+        const list = []; ['Open', 'Paid', 'Unpaid', 'Complete', 'Cancelled'].concat(seen).forEach(x => { if (!list.some(y => y.toLowerCase() === x.toLowerCase())) list.push(x); });
+        return list.slice(0, 10).map(x => { const on = cur.toLowerCase() === x.toLowerCase(); return { label: x, pick: () => this.setSvc({ status: x, confirmDel: false }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }); })(),
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, team: null, sales: null, invScopes: null, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -1567,8 +1614,17 @@ class Component extends DCLogic {
       return { label: f + ' ' + n, pick: () => this.setState({ invFilter: f }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' };
     });
     const iq = st.invQ.trim().toLowerCase();
+    const invSortVal = st.invSort || (scope === 'day' ? 'stop' : 'new');
+    const invSortOpts = [['stop', 'Stop #'], ['new', 'Date: newest first'], ['old', 'Date: oldest first'], ['status', 'Status'], ['customer', 'Customer A–Z']].map(([v, label]) => ({ v, label }));
     const invList = all.filter(i => (st.invFilter === 'All' || i.st === st.invFilter) && (!iq || (i.id + ' ' + i.customer).toLowerCase().includes(iq)))
-      .sort((a, b) => (scope !== 'day' ? b.ymd.localeCompare(a.ymd) : 0) || (scope === 'day' ? (a.stop && b.stop ? +a.stop - +b.stop : a.stop ? -1 : b.stop ? 1 : 0) : 0) || b.id.localeCompare(a.id, undefined, { numeric: true }));
+      .sort((a, b) => {
+        const byStop = (a.stop && b.stop ? +a.stop - +b.stop : a.stop ? -1 : b.stop ? 1 : 0), byId = b.id.localeCompare(a.id, undefined, { numeric: true });
+        if (invSortVal === 'old') return a.ymd.localeCompare(b.ymd) || byStop || -byId;
+        if (invSortVal === 'new') return b.ymd.localeCompare(a.ymd) || byStop || byId;
+        if (invSortVal === 'status') return stRank(a.st) - stRank(b.st) || b.ymd.localeCompare(a.ymd) || byStop || byId;
+        if (invSortVal === 'customer') return a.customer.localeCompare(b.customer) || byId;
+        return byStop || b.ymd.localeCompare(a.ymd) || byId;
+      });
     const cnt = k => Array.from(d.invoices.values()).filter(o => this.inDay(o) && this.status(o).st === k).length;
     const dayName = { today: 'today', tomorrow: 'tomorrow', both: 'today or tomorrow' }[st.day];
     const rl = this.routeList(), geo = st.geo;
@@ -1722,16 +1778,27 @@ class Component extends DCLogic {
         const pays = ['All', 'Paid', 'Unpaid'].map(k => chip(st.salesPay === k, k + ' ' + (k === 'All' ? inPer.length : inPer.filter(x => x.paid === (k === 'Paid')).length), () => this.setState({ salesPay: k })));
         const sq = st.salesQ.trim().toLowerCase();
         const list = inPer.filter(x => (st.salesPay === 'All' || x.paid === (st.salesPay === 'Paid')) && (!sq || (x.o.id + ' ' + x.o.customer + ' ' + x.o.driver).toLowerCase().includes(sq)))
-          .sort((a, b) => (b.o.ymd || '').localeCompare(a.o.ymd || '') || b.o.id.localeCompare(a.o.id, undefined, { numeric: true }));
+          .sort((a, b) => {
+            const dn = (b.o.ymd || '').localeCompare(a.o.ymd || ''), byId = b.o.id.localeCompare(a.o.id, undefined, { numeric: true });
+            const ss = st.salesSort;
+            if (ss === 'old') return -dn || -byId;
+            if (ss === 'status') return stRank(this.status(a.o).st) - stRank(this.status(b.o).st) || dn || byId;
+            if (ss === 'unpaid') return (a.paid - b.paid) || dn || byId;
+            if (ss === 'paid') return (b.paid - a.paid) || dn || byId;
+            if (ss === 'amount') return (b.amt - a.amt) || dn || byId;
+            return dn || byId;
+          });
         const rows = list.map(x => {
           const s = this.status(x.o), pm = String(x.o.paid || '').trim();
           return { id: x.o.id, sub: [x.o.customer || 'No customer', x.o.date || 'No date', x.o.driver || 'Unassigned'].join(' · '),
             delivery: s.st === 'Complete' ? 'Delivered' : 'Delivery: ' + s.label, amount: usd(x.amt),
+            hasSvc: x.o.services.length > 0, svcs: x.o.services.map(v => ({ label: v.sid + ' · ' + (v.status || 'No status'), bg: svcColor(v.status)[0], fg: svcColor(v.status)[1] })),
             payLabel: x.paid ? (pm && !/^(y|yes|paid|true|1|x|✓|✔)$/i.test(pm) ? 'Paid · ' + pm : 'Paid') : 'Unpaid',
             payBg: x.paid ? C.pill.Complete[0] : 'oklch(0.93 0.05 27)', payFg: x.paid ? C.pill.Complete[1] : 'oklch(0.42 0.15 27)',
             open: () => this.setState({ tab: 'invoices', detail: x.o.id }) };
         });
-        return { tiles, periods, pays, rows, q: st.salesQ, onQ: e => this.setState({ salesQ: e.target.value }),
+        const sortOpts = [['new', 'Date: newest first'], ['old', 'Date: oldest first'], ['status', 'Delivery status'], ['unpaid', 'Unpaid first'], ['paid', 'Paid first'], ['amount', 'Amount: highest first']].map(([v, label]) => ({ v, label }));
+        return { tiles, periods, pays, rows, sortOpts, sortVal: st.salesSort, onSort: e => { saveSort('scanchk.salesSort', e.target.value); this.setState({ salesSort: e.target.value }); }, q: st.salesQ, onQ: e => this.setState({ salesQ: e.target.value }),
           listTitle: names[st.salesPeriod] + (st.salesPay === 'All' ? '' : ' · ' + st.salesPay.toLowerCase()) + ' · ' + list.length + ' invoice' + (list.length === 1 ? '' : 's'),
           listTotal: usd(sum(list)), empty: !list.length, emptyText: all.length ? 'No invoices match.' : 'No invoices yet.' };
       })(),
@@ -1750,7 +1817,8 @@ class Component extends DCLogic {
       } : null, showCands: !L && cands.length > 1 && pend > 0,
       candsTitle: pend + ' item' + (pend > 1 ? 's' : '') + ' scanned · ' + cands.length + ' possible invoices. Keep scanning or pick one.',
       idle: !L && pend === 0, hasScans: st.scans.length > 0, scanCount: st.scans.length, recent,
-      detailInv, noDetail: !D, filters, invScopes, invList, invEmpty: !invList.length,
+      detailInv, noDetail: !D, filters, invScopes, invList, invSortOpts, invSortVal,
+      onInvSort: e => { saveSort('scanchk.invSort', e.target.value); this.setState({ invSort: e.target.value }); }, invEmpty: !invList.length,
       results, searchHint: q.length < 2 ? 'Enter at least 2 characters.' : results.length ? '' : 'No model or UPC matches “' + q + '”.'
     };
   }
