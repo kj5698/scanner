@@ -1,6 +1,6 @@
 // Scanner backend
 // Sign-in: add a DRIVERS tab with columns  Name | PIN | Role  (Role = admin or driver).
-// Assignments: add an ASSIGNMENTS tab with columns  InvoiceNumber | Driver.
+// Assignments: add an ASSIGNMENTS tab with columns  InvoiceNumber | Driver | Stop  (the app fills it in).
 // Invoices not listed in ASSIGNMENTS go to the first driver in DRIVERS (driver 1).
 // After pasting: run "authorize" once, then Deploy → Manage deployments → New version.
 
@@ -95,12 +95,19 @@ function allData_(ss, u) {
   out.tabs = ss.getSheets().map(s => s.getName());
   out.me = u;
   const list = drivers_(ss), def = defaultDriver_(list), amap = {};
-  out.assignments.forEach(r => { const id = String(col_(r, /inv/i)).trim(), dr = String(col_(r, /driver/i)).trim(); if (id && dr) amap[id] = dr; });
+  const smap = {};
+  out.assignments.forEach(r => {
+    const id = String(col_(r, /inv/i)).trim(), dr = String(col_(r, /driver/i)).trim(), st = String(col_(r, /^\s*stop/i)).replace(/\D/g, '');
+    if (id && dr) amap[id] = dr;
+    if (id && st) smap[id] = st;
+  });
   out.invoices.forEach(r => {
+    const id = invId_(r);
     const old = Object.keys(r).find(k => /driver/i.test(k));
-    const cur = amap[invId_(r)] || (old ? String(r[old]).trim() : '') || def;
+    const cur = amap[id] || (old ? String(r[old]).trim() : '') || def;
     if (old) delete r[old];
     r['Driver'] = cur;
+    if (smap[id]) { const sk = Object.keys(r).find(k => /^\s*stop/i.test(k)) || 'Stop'; r[sk] = smap[id]; }
   });
   out.drivers = list.map(d => ({ Name: d.name, Role: d.role }));
   delete out.assignments;
@@ -248,6 +255,38 @@ function assign_(ss, p) {
   return { ok: true };
 }
 
+function stops_(ss, p) {
+  const rows = JSON.parse(p.rows || '[]');
+  let sh = findSheet_(ss, SHEETS.assignments);
+  if (!sh) { sh = ss.insertSheet('ASSIGNMENTS'); sh.appendRow(['InvoiceNumber', 'Driver', 'Stop']); }
+  const lc = Math.max(1, sh.getLastColumn());
+  const h = sh.getRange(1, 1, 1, lc).getValues()[0].map(x => String(x).trim());
+  let ic = h.findIndex(x => /inv/i.test(x)), dc = h.findIndex(x => /driver/i.test(x));
+  if (ic < 0) { ic = 0; sh.getRange(1, 1).setValue('InvoiceNumber'); }
+  if (dc < 0) { dc = ensureCol_(sh, 'Driver') - 1; }
+  const sc = ensureCol_(sh, 'Stop') - 1;
+  const w = Math.max(sh.getLastColumn(), ic + 1, dc + 1, sc + 1);
+  const v = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, w).getValues() : [];
+  const at = {};
+  v.forEach((r, i) => { const id = String(r[ic]).trim(); if (id) at[id] = i; });
+  const add = [];
+  rows.forEach(r => {
+    const id = String(r.invoice || '').trim(); if (!id) return;
+    if (id in at) {
+      const row = v[at[id]];
+      if (r.driver) row[dc] = r.driver;
+      row[sc] = r.stop === '' || r.stop == null ? '' : +r.stop;
+    } else {
+      const row = new Array(w).fill('');
+      row[ic] = id; row[dc] = r.driver || ''; row[sc] = r.stop === '' || r.stop == null ? '' : +r.stop;
+      add.push(row);
+    }
+  });
+  if (v.length) sh.getRange(2, 1, v.length, w).setValues(v);
+  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, w).setValues(add);
+  return { ok: true, saved: rows.length };
+}
+
 function authorize() {
   DriveApp.createFolder('scanner-permission-test').setTrashed(true);
   PropertiesService.getScriptProperties().getKeys();
@@ -280,6 +319,7 @@ function handle_(p) {
     if (p.action === 'log') return writeLog_(ss, JSON.parse(p.rows || '[]'), u);
     if (p.action === 'loc') return loc_(ss, p, u);
     if (p.action === 'assign') return admin ? assign_(ss, p) : { ok: false, error: 'Only admins can reassign invoices.' };
+    if (p.action === 'stops') return admin ? stops_(ss, p) : { ok: false, error: 'Only admins can change stop order.' };
     return allData_(ss, u);
   } catch (err) {
     return { ok: false, error: String(err) };

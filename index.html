@@ -476,6 +476,13 @@ input{font:inherit}
 
     <sc-if value="{{ isRoute }}" hint-placeholder-val="{{ false }}">
       <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-if value="{{ routeDrivers }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ routeDrivers }}" as="f" hint-placeholder-count="3">
+              <button onClick="{{ f.pick }}" style="height:34px;padding:0 12px;white-space:nowrap;flex:none;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
         <div style="border-radius:14px;overflow:hidden;border:1px solid #e2dfd7;background:#e9e6df">
           <div id="routemap" style="width:100%;height:340px"></div>
         </div>
@@ -602,6 +609,16 @@ input{font:inherit}
           <div id="teammap" style="width:100%;height:260px"></div>
         </div>
         <div style="font-size:12px;color:#6b675e;line-height:1.4">{{ team.locNote }}</div>
+        <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-weight:600;font-size:14px">Stop order</div>
+          <div style="font-size:12px;color:#55524a;line-height:1.45;text-wrap:pretty">{{ team.orderNote }}</div>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Routes start from (warehouse address, optional)
+            <div style="display:flex;gap:8px">
+              <input value="{{ team.depotDraft }}" onChange="{{ team.onDepot }}" placeholder="e.g. 2100 NW 25th Ave, Miami, FL" style="flex:1;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:14px;color:#1c1b18;min-width:0">
+              <button onClick="{{ team.saveDepot }}" style="height:36px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer;flex:none">{{ team.depotBtn }}</button>
+            </div>
+          </label>
+        </div>
         <sc-if value="{{ team.noDrivers }}" hint-placeholder-val="{{ false }}">
           <div style="padding:14px 16px;border:1px dashed #cfcbc0;border-radius:12px;font-size:14px;color:#33312b;line-height:1.5">Add a DRIVERS tab with the columns Name, PIN and Role. Put "admin" in Role for yourself and "driver" for everyone else. The first driver is the default for invoices not listed in ASSIGNMENTS.</div>
         </sc-if>
@@ -614,7 +631,13 @@ input{font:inherit}
                 <div style="font-size:12px;color:#55524a">{{ g.sub }}</div>
                 <div style="font-size:11px;color:#6b675e;font-family:'IBM Plex Mono',monospace;margin-top:2px">{{ g.locText }}</div>
               </div>
+              <sc-if value="{{ g.canOrder }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ g.autoOrder }}" style="height:36px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer;flex:none;border-color:#1c1b18;font-weight:600">{{ g.autoLabel }}</button>
+              </sc-if>
             </div>
+            <sc-if value="{{ g.orderMsg }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:8px 16px;font-size:12px;color:#55524a;background:#fbfaf7;border-bottom:1px solid #eeebe4">{{ g.orderMsg }}</div>
+            </sc-if>
             <sc-if value="{{ g.showBar }}" hint-placeholder-val="{{ true }}">
               <div style="height:5px;background:#eeebe4"><div style="height:100%;width:{{ g.pct }};background:oklch(0.52 0.13 150)"></div></div>
             </sc-if>
@@ -626,6 +649,10 @@ input{font:inherit}
                   </sc-if>
                   <button onClick="{{ iv.open }}" style="flex:1;min-width:0;text-align:left;border:none;background:none;padding:0;cursor:pointer;color:#1c1b18;font:500 14px 'IBM Plex Mono';word-break:break-all">{{ iv.id }}</button>
                   <div style="flex:none;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:{{ iv.pillBg }};color:{{ iv.pillFg }}">{{ iv.statusLabel }}</div>
+                  <sc-if value="{{ iv.canMove }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ iv.up }}" aria-label="Move up" style="flex:none;width:36px;height:36px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:{{ iv.upFg }};font:600 14px 'IBM Plex Sans';cursor:pointer">▲</button>
+                    <button onClick="{{ iv.down }}" aria-label="Move down" style="flex:none;width:36px;height:36px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:{{ iv.downFg }};font:600 14px 'IBM Plex Sans';cursor:pointer">▼</button>
+                  </sc-if>
                 </div>
                 <div style="font-size:12px;color:#55524a">{{ iv.customer }} · {{ iv.prog }}</div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -749,11 +776,11 @@ input{font:inherit}
 const dAgo = n => { const t = new Date(); t.setDate(t.getDate() - n); return (t.getMonth() + 1) + '/' + t.getDate() + '/' + t.getFullYear(); };
 const SAMPLE = {
   invoices: [
-    { 'Invoice': '10231', 'Date': '10/29/2026', 'Customer': 'J. Ramirez', 'address': '1200 Brickell Ave, Miami, FL 33131 3', 'Driver': 'Carlos', 'Paid': 'Yes' },
-    { 'Invoice': '10232', 'Date': '10/29/2026', 'Customer': 'Harbor Cafe', 'address': '455 NW 7th St, Miami, FL 33136 1', 'Driver': 'Carlos', 'Paid': 'No' },
-    { 'Invoice': '10233', 'Date': '10/29/2026', 'Customer': 'M. Chen', 'address': '88 SW 8th St, Miami, FL 33130 4', 'Driver': 'Dana', 'Paid': 'Yes' },
-    { 'Invoice': '10234', 'Date': '10/29/2026', 'Customer': 'T. Okafor', 'address': '3500 Main Hwy, Coconut Grove, FL 33133 2', 'Driver': 'Dana', 'Paid': '' },
-    { 'Invoice': '10235', 'Date': '10/30/2026', 'Customer': 'B. Lewis', 'address': '701 Lincoln Rd, Miami Beach, FL 33139 5', 'Driver': '', 'Paid': 'No' },
+    { 'Invoice': '10231', 'Date': dAgo(0), 'Customer': 'J. Ramirez', 'address': '1200 Brickell Ave, Miami, FL 33131 3', 'Driver': 'Carlos', 'Paid': 'Yes' },
+    { 'Invoice': '10232', 'Date': dAgo(0), 'Customer': 'Harbor Cafe', 'address': '455 NW 7th St, Miami, FL 33136 1', 'Driver': 'Carlos', 'Paid': 'No' },
+    { 'Invoice': '10233', 'Date': dAgo(0), 'Customer': 'M. Chen', 'address': '88 SW 8th St, Miami, FL 33130 4', 'Driver': 'Dana', 'Paid': 'Yes' },
+    { 'Invoice': '10234', 'Date': dAgo(0), 'Customer': 'T. Okafor', 'address': '3500 Main Hwy, Coconut Grove, FL 33133 2', 'Driver': 'Dana', 'Paid': '' },
+    { 'Invoice': '10235', 'Date': dAgo(-1), 'Customer': 'B. Lewis', 'address': '701 Lincoln Rd, Miami Beach, FL 33139 5', 'Driver': '', 'Paid': 'No' },
     { 'Invoice': '10241', 'Date': dAgo(0), 'Customer': 'R. Alvarez', 'address': '', 'Driver': 'Carlos', 'Paid': 'Card', 'Total': '178.00' },
     { 'Invoice': '10242', 'Date': dAgo(0), 'Customer': 'Sunset Deli', 'address': '', 'Driver': 'Dana', 'Paid': 'No', 'Total': '74.00' },
     { 'Invoice': '10243', 'Date': dAgo(1), 'Customer': 'P. Nguyen', 'address': '', 'Driver': 'Carlos', 'Paid': 'Cash', 'Total': '203.00' },
@@ -828,7 +855,8 @@ class Component extends DCLogic {
   state = {
     url: localStorage.getItem('scanchk.url') || '', urlDraft: localStorage.getItem('scanchk.url') || '',
     demo: !localStorage.getItem('scanchk.url'), data: null, loading: false, err: '',
-    tab: 'scan', scans: [], locked: null, flash: null, cam: false, manual: '', q: '', invQ: '', invFilter: 'Open', invScope: 'day', invSort: (() => { try { return localStorage.getItem('scanchk.invSort') || ''; } catch (e) { return ''; } })(),
+    tab: 'scan', scans: [], locked: null, flash: null, cam: false, manual: '', q: '', invQ: '', invFilter: 'Open', routeDrv: '', ordering: {}, depot: (() => { try { return localStorage.getItem('scanchk.depot') || ''; } catch (e) { return ''; } })(),
+    depotDraft: (() => { try { return localStorage.getItem('scanchk.depot') || ''; } catch (e) { return ''; } })(), invScope: 'day', invSort: (() => { try { return localStorage.getItem('scanchk.invSort') || ''; } catch (e) { return ''; } })(),
     salesSort: (() => { try { return localStorage.getItem('scanchk.salesSort') || 'new'; } catch (e) { return 'new'; } })(), salesPeriod: 'today', salesPay: 'All', salesQ: '',
     detail: null, settings: false,
     day: localStorage.getItem('scanchk.day') || 'today', routeSel: null, mode: 'load', proof: null,
@@ -873,7 +901,8 @@ class Component extends DCLogic {
 
   routeList() {
     const d = this.state.data; if (!d) return [];
-    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address)
+    const rd = this.state.routeDrv && this.state.me && this.state.me.role === 'admin' ? this.state.routeDrv.trim().toLowerCase() : '';
+    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address && (!rd || (rd === '__un' ? !String(o.driver || '').trim() : String(o.driver || '').trim().toLowerCase() === rd)))
       .sort((a, b) => (a.ymd || '').localeCompare(b.ymd || '') || ((a.stop !== '' ? +a.stop : 999) - (b.stop !== '' ? +b.stop : 999)) || a.id.localeCompare(b.id))
       .map((o, i) => ({ o, v: this.invView(o), num: o.stop || String(i + 1) }));
   }
@@ -909,7 +938,7 @@ class Component extends DCLogic {
         const icon = L.divIcon({ className: '', iconSize: [24, 24], iconAnchor: [12, 12], html: '<div style="width:24px;height:24px;border-radius:6px;background:oklch(0.54 0.19 27);color:#fff;border:2px solid ' + (c.saved ? 'oklch(0.85 0.17 90)' : '#fff') + ';box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:700 12px IBM Plex Sans,sans-serif">T</div>' });
         L.marker([c.lat, c.lon], { icon }).bindPopup('<b>' + c.name.replace(/</g, '&lt;') + '</b><br>' + c.type + (c.stalls ? ' · ' + c.stalls + ' stalls' : '') + '<br><a target="_blank" rel="noopener" href="' + c.nav + '">Navigate</a>').addTo(this.layer);
       });
-      const fk = pts.length + ':' + this.state.day;
+      const fk = pts.length + ':' + this.state.day + ':' + this.state.routeDrv;
       if (pts.length && this.fitted !== fk) { this.fitted = fk; this.map.fitBounds(pts, { padding: [36, 36], maxZoom: 14 }); }
       const sel = stops.find(s => s.o.id === selId), sg = sel && geo[sel.o.address];
       if (sg && sg !== 'x' && this.panned !== selId) { this.panned = selId; this.map.panTo([sg.lat, sg.lon]); }
@@ -1044,11 +1073,11 @@ class Component extends DCLogic {
       else { const t = Date.parse(o.date); o.ymd = isNaN(t) ? '' : (d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()))(new Date(t)); } o.customer = pick(r, [/cust/i, /client/i, /name/i]); o.driver = pick(r, [/driver/i]);
       o.paid = pick(r, [/paid|payment|pay\s*status/i]); o.total = pick(r, [/total|grand|amount/i]);
       const a = pick(r, [/addr/i]).replace(/[,\s]+$/, '');
-      const sm = a.match(/^(.*?\D)[\s,#\-]+(?:stop\s*#?\s*)?(\d{1,2})$/i);
+      const sm = a.match(/^(.*?(?:\D|\b\d{5}))[\s,#\-]+(?:stop\s*#?\s*)?(\d{1,2})$/i);
       o.address = sm ? sm[1].replace(/[,\s\-#]+$/, '') : a; o.stop = sm ? sm[2] : '';
       const sc = Object.keys(r).find(k => /^\s*stop/i.test(k));
       const sv = sc ? String(r[sc] || '').replace(/\D/g, '') : '';
-      if (sv) { o.stop = String(+sv); o.address = a; if (sm && sm[2] === o.stop) o.address = sm[1].replace(/[,\s\-#]+$/, ''); }
+      if (sv) { o.stop = String(+sv); o.address = a; if (sm && (sm[2] === o.stop || /\b\d{5}$/.test(sm[1].trim()))) o.address = sm[1].replace(/[,\s\-#]+$/, ''); }
     });
     (raw.items || []).forEach(r => {
       const id = pick(r, [/^invoice/i, /inv/i]); const m = M(pick(r, [/model/i, /sku/i, /part/i, /item/i]));
@@ -1165,9 +1194,92 @@ class Component extends DCLogic {
     }, () => {}, { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 });
   }
 
+  setStopsLocal(rows) {
+    this.setState(s => { const inv = new Map(s.data.invoices);
+      rows.forEach(r => { const o = inv.get(r.invoice); if (o) inv.set(r.invoice, { ...o, stop: String(r.stop), driver: r.driver != null ? r.driver : o.driver }); });
+      return { data: { ...s.data, invoices: inv } }; });
+  }
+  async saveStops(rows, label) {
+    if (!rows.length) return;
+    this.setStopsLocal(rows);
+    if (this.state.demo) { this.setFlash('ok', label || 'Stop order saved', 'Demo only · not written to the sheet'); return; }
+    try {
+      const j = await this.call({ action: 'stops', rows: JSON.stringify(rows.map(r => ({ invoice: r.invoice, driver: r.driver, stop: r.stop }))) });
+      if (j && j.invoices) throw new Error('Your Apps Script is the old version. Paste the new script and deploy a New version.');
+      if (!j || j.ok === false) throw new Error((j && j.error) || 'Could not save the stop order');
+      this.setFlash('ok', label || 'Stop order saved', 'Saved to ASSIGNMENTS tab');
+    } catch (e) { this.setState({ err: 'Stop order not saved: ' + e.message }); }
+  }
+  teamList(name) {
+    const d = this.state.data, k = s => String(s || '').trim().toLowerCase();
+    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && k(o.driver) === k(name))
+      .sort((a, b) => (+a.stop || 999) - (+b.stop || 999) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+  }
+  moveStop(name, id, dir) {
+    const list = this.teamList(name), i = list.findIndex(o => o.id === id), j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    const rows = list.map((o, n) => ({ invoice: o.id, driver: name, stop: n + 1 })).filter((r, n) => String(list[n].stop) !== String(r.stop));
+    this.saveStops(rows, 'Stop order saved for ' + name);
+  }
+  async geocodeOne(a) {
+    if (!a) return null;
+    if (a in this.state.geo) return this.state.geo[a] === 'x' ? null : this.state.geo[a];
+    while (this.geoBusy) await new Promise(r => setTimeout(r, 300));
+    this.geoBusy = true;
+    let res = null;
+    try { const j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(a))).json(); res = j && j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : null; } catch (e) {}
+    const geo = { ...this.state.geo, [a]: res || 'x' };
+    try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {}
+    this.setState({ geo });
+    await new Promise(r => setTimeout(r, 1100));
+    this.geoBusy = false;
+    return res;
+  }
+  async autoOrder(name) {
+    const msg = t => this.setState(s => ({ ordering: { ...s.ordering, [name]: t } }));
+    const list = this.teamList(name);
+    if (list.length < 2) { msg('Needs at least 2 invoices to order.'); return; }
+    const k = s => String(s || '').trim().toLowerCase();
+    const pts = {};
+    for (let i = 0; i < list.length; i++) {
+      msg('Finding addresses on the map… ' + (i + 1) + '/' + list.length);
+      pts[list[i].id] = await this.geocodeOne(list[i].address);
+    }
+    let start = null, from = '';
+    if (this.state.depot) { msg('Finding the warehouse address…'); start = await this.geocodeOne(this.state.depot); if (start) from = 'the warehouse'; }
+    if (!start) { const loc = (this.state.data.locations || []).find(l => k(l.name) === k(name)); if (loc) { start = { lat: loc.lat, lon: loc.lon }; from = name + "'s last location"; } }
+    const geoL = list.filter(o => pts[o.id]), noGeo = list.filter(o => !pts[o.id]);
+    const dist = (a, b) => hav([a.lat, a.lon], [b.lat, b.lon]);
+    let order = [];
+    if (geoL.length) {
+      const left = geoL.slice();
+      let cur = start;
+      if (!cur) { const c = { lat: geoL.reduce((a, o) => a + pts[o.id].lat, 0) / geoL.length, lon: geoL.reduce((a, o) => a + pts[o.id].lon, 0) / geoL.length };
+        left.sort((a, b) => dist(pts[b.id], c) - dist(pts[a.id], c)); order.push(left.shift()); cur = pts[order[0].id]; from = 'the farthest stop'; }
+      while (left.length) { let bi = 0; left.forEach((o, i) => { if (dist(cur, pts[o.id]) < dist(cur, pts[left[bi].id])) bi = i; }); const nx = left.splice(bi, 1)[0]; order.push(nx); cur = pts[nx.id]; }
+      const P = i => i < 0 ? start : pts[order[i].id];
+      const seg = (i, j) => (P(i) ? dist(P(i), P(j)) : 0);
+      for (let pass = 0, better = true; better && pass < 50; pass++) {
+        better = false;
+        for (let i = start ? 0 : 1; i < order.length - 1; i++) for (let j = i + 1; j < order.length; j++) {
+          const before = seg(i - 1, i) + (j + 1 < order.length ? dist(P(j), P(j + 1)) : 0);
+          const after = seg(i - 1, j) + (j + 1 < order.length ? dist(P(i), P(j + 1)) : 0);
+          if (after + 1e-9 < before) { order = order.slice(0, i).concat(order.slice(i, j + 1).reverse(), order.slice(j + 1)); better = true; }
+        }
+      }
+    }
+    order = order.concat(noGeo);
+    let miles = 0; order.forEach((o, i) => { const a = i ? pts[order[i - 1].id] : start, b = pts[o.id]; if (a && b) miles += dist(a, b); });
+    const rows = order.map((o, n) => ({ invoice: o.id, driver: name, stop: n + 1 }));
+    msg('Ordered ' + order.length + ' stops from ' + (from || 'the first stop') + ' · about ' + miles.toFixed(1) + ' mi straight-line' + (noGeo.length ? ' · ' + noGeo.length + ' address' + (noGeo.length > 1 ? 'es' : '') + ' not found, put last' : ''));
+    await this.saveStops(rows, 'Auto-ordered ' + name + "'s stops");
+  }
   async assign(id, name) {
-    this.setState(s => { const inv = new Map(s.data.invoices), o = { ...inv.get(id), driver: name }; inv.set(id, o); return { data: { ...s.data, invoices: inv } }; });
+    const prev = this.state.data.invoices.get(id), endStop = name ? this.teamList(name).filter(o => o.id !== id && o.ymd === (prev && prev.ymd)).reduce((m, o) => Math.max(m, +o.stop || 0), 0) + 1 : '';
+    this.setState(s => { const inv = new Map(s.data.invoices), o = { ...inv.get(id), driver: name, stop: name ? String(endStop) : (inv.get(id) || {}).stop }; inv.set(id, o); return { data: { ...s.data, invoices: inv } }; });
     if (this.state.demo) return;
+    if (name) setTimeout(() => this.saveStops([{ invoice: id, driver: name, stop: endStop }], 'Invoice ' + id + ' → ' + name + ', stop ' + endStop), 1500);
     try {
       const j = await this.call({ action: 'assign', invoice: id, driver: name });
       if (!j || j.ok === false) throw new Error((j && j.error) || 'Could not reassign');
@@ -1581,7 +1693,7 @@ class Component extends DCLogic {
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -1721,6 +1833,7 @@ class Component extends DCLogic {
         if (!navigator.geolocation) return this.setState({ locErr: 'Location is not available on this device.' });
         navigator.geolocation.getCurrentPosition(p => this.setState({ useLoc: true, locErr: '', myLoc: { lat: p.coords.latitude, lon: p.coords.longitude } }), () => this.setState({ locErr: 'Location permission was denied.' }), { enableHighAccuracy: true, timeout: 15000 });
       },
+      routeDrivers: isAdmin && (d.drivers || []).length ? [['', 'All drivers']].concat((d.drivers || []).filter(x => x.role !== 'admin' || Array.from(d.invoices.values()).some(o => String(o.driver || '').trim().toLowerCase() === x.name.toLowerCase())).map(x => [x.name.toLowerCase(), x.name])).map(([v, l]) => { const on = (st.routeDrv || '') === v; return { label: l, pick: () => this.setState({ routeDrv: v, routeSel: null }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null,
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
       routeEmpty: !rl.length, routeEmptyText: 'No invoices with an address scheduled for ' + dayName + '.',
@@ -1730,13 +1843,15 @@ class Component extends DCLogic {
         const k = s => String(s || '').trim().toLowerCase();
         const drivers = d.drivers || [];
         const owner = o => drivers.find(x => k(o.driver) && k(x.name) === k(o.driver));
-        const dayInv = Array.from(d.invoices.values()).filter(o => this.inDay(o)).sort((a, b) => (+a.stop || 999) - (+b.stop || 999));
+        const dayInv = Array.from(d.invoices.values()).filter(o => this.inDay(o)).sort((a, b) => (+a.stop || 999) - (+b.stop || 999) || a.id.localeCompare(b.id, undefined, { numeric: true }));
         const opts = drivers.map(x => ({ v: x.name, label: x.name + (x.name === d.defDrv ? ' (default)' : '') }));
+        const canOrder = st.day !== 'both';
         const row = o => {
           const s = this.status(o), [bg, fg] = C.pill[s.st], ow = owner(o), dl = (d.deliveries || []).filter(x => x.invoice === o.id).pop();
           return { id: o.id, customer: o.customer || 'No customer', stop: o.stop, hasStop: !!o.stop, statusLabel: s.label, pillBg: bg, pillFg: fg,
             prog: s.tot ? 'Loaded ' + s.done + '/' + s.tot + ' · Delivered ' + s.del + '/' + s.tot : 'Services only',
-            driverVal: ow ? ow.name : '', opts, reassign: e => this.assign(o.id, e.target.value), open: () => this.setState({ tab: 'invoices', detail: o.id }),
+            driverVal: ow ? ow.name : '', opts, reassign: e => this.assign(o.id, e.target.value),
+            canMove: !!(ow && canOrder), upFg: C.ink, downFg: C.ink, up: () => ow && this.moveStop(ow.name, o.id, -1), down: () => ow && this.moveStop(ow.name, o.id, 1), open: () => this.setState({ tab: 'invoices', detail: o.id }),
             hasPhoto: !!(dl && dl.photo), photo: dl ? dl.photo : '', hasSig: !!(dl && dl.sig), sig: dl ? dl.sig : '', receiver: dl && dl.receiver ? 'Received by ' + dl.receiver : '' };
         };
         const group = (name, email, invs, i, un) => {
@@ -1746,12 +1861,18 @@ class Component extends DCLogic {
           return { name, initials: un ? '—' : initials(name), avatarBg: un ? '#9a958a' : TEAMC[i % TEAMC.length],
             sub: invs.length + ' invoice' + (invs.length === 1 ? '' : 's') + (un ? '' : ' · ' + loaded + ' loaded · ' + done + ' delivered'),
             locText: un ? '' : loc ? 'Location ' + agoTxt(loc.updated) : 'No location yet', pct: (invs.length ? Math.round(done / invs.length * 100) : 0) + '%', showBar: !un,
-            invoices: invs.map(row), empty: !invs.length, emptyText: un ? 'Every invoice has a driver.' : 'No invoices for this day.' };
+            invoices: invs.map(row), empty: !invs.length,
+            canOrder: !un && canOrder && invs.length > 1, autoOrder: () => this.autoOrder(name), autoLabel: 'Auto-order',
+            orderMsg: !un && st.ordering[name] ? st.ordering[name] : '', emptyText: un ? 'Every invoice has a driver.' : 'No invoices for this day.' };
         };
         const groups = drivers.map((x, i) => group(x.name, x.email, dayInv.filter(o => owner(o) === x), i, false));
         const un = dayInv.filter(o => !owner(o));
         groups.push(group('Unassigned', '', un, 0, true));
         return { groups, noDrivers: !drivers.length,
+          orderNote: canOrder ? 'Use ▲ ▼ to change a driver\'s stop order, or tap Auto-order to sort their stops into a short driving route. Stops are numbered 1, 2, 3… for each driver and saved to the ASSIGNMENTS tab. Drivers see the new order when they tap Refresh.' : 'Pick Today or Tomorrow at the top to change stop order.',
+          depotDraft: st.depotDraft, onDepot: e => this.setState({ depotDraft: e.target.value }),
+          depotBtn: st.depotDraft.trim() === st.depot ? (st.depot ? 'Saved ✓' : 'Save') : 'Save',
+          saveDepot: () => { const v = st.depotDraft.trim(); try { localStorage.setItem('scanchk.depot', v); } catch (e) {} this.setState({ depot: v }); },
           locNote: (d.locations || []).length ? 'Driver locations update about every 2 minutes while their app is open.' : 'No driver locations yet. They appear when a driver opens the app and allows location.' };
       })(),
       sales: (() => {
