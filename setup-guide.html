@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Scanner Setup Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:#f4f3ef;color:#1c1b18;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#1c1b18}a:hover{color:#55524a}
+</style>
+</helmet>
+
+<div style="max-width:760px;margin:0 auto;padding:28px 18px 80px;display:flex;flex-direction:column;gap:22px">
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b675e;text-transform:uppercase;letter-spacing:0.08em">One-time setup · about 5 minutes</div>
+    <div style="font-size:30px;font-weight:600;letter-spacing:-0.02em;line-height:1.15">Connect your Google Sheet to the scanner</div>
+    <div style="font-size:16px;color:#4a473f;line-height:1.5;text-wrap:pretty">You will add a small piece of code to your Google Sheet. Google then gives you a private link. You paste that link into the scanner, and the scanner can read your INVOICE, INVOICEITEMS, UPCS and SERVICESSOLD tabs and write scans to a new SCAN LOG tab. Do this on a computer, not a phone.</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">1</div>
+      <div style="font-size:19px;font-weight:600">Open the code editor inside your sheet</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">Open your Google Sheet (the one with the INVOICE and UPCS tabs). In the menu at the top, click <b>Extensions</b>, then click <b>Apps Script</b>. A new browser tab opens.</div>
+    <div style="border:1px solid #d6d2c8;border-radius:10px;overflow:hidden;background:#fbfaf7">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;font-size:13px;color:#4a473f;border-bottom:1px solid #e2dfd7">
+        <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Data</span><span>Tools</span>
+        <span style="outline:2px solid oklch(0.62 0.15 60);outline-offset:3px;border-radius:3px;font-weight:600;color:#1c1b18">Extensions</span><span>Help</span>
+      </div>
+      <div style="padding:10px 14px 14px 14px;display:flex">
+        <div style="margin-left:min(52%,330px);background:#fff;border:1px solid #d6d2c8;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.08);font-size:13px;min-width:150px">
+          <div style="padding:8px 12px;color:#6b675e">Add-ons</div>
+          <div style="padding:8px 12px;color:#6b675e">Macros</div>
+          <div style="padding:8px 12px;background:oklch(0.95 0.05 70);font-weight:600;outline:2px solid oklch(0.62 0.15 60)">Apps Script</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">2</div>
+      <div style="font-size:19px;font-weight:600">Erase what is in the code box</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">You will see a box with a few lines of code already in it. Click inside the box, press <b>Ctrl + A</b> (Mac: <b>Cmd + A</b>) to select everything, then press <b>Delete</b>. The box should be empty.</div>
+    <div style="border:1px solid #d6d2c8;border-radius:10px;overflow:hidden;background:#fbfaf7">
+      <div style="padding:8px 14px;font-size:12px;color:#6b675e;border-bottom:1px solid #e2dfd7;font-family:'IBM Plex Mono',monospace">Code.gs</div>
+      <div style="padding:14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;color:#6b675e;text-decoration:line-through">function myFunction() {<br>&nbsp;&nbsp;<br>}</div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">3</div>
+      <div style="font-size:19px;font-weight:600">Copy this code and paste it into the empty box</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">Click the <b>Copy code</b> button below. Go back to the Apps Script tab, click in the empty box and press <b>Ctrl + V</b> (Mac: <b>Cmd + V</b>). Then click the <b>Save</b> button (the small disk icon above the code) or press <b>Ctrl + S</b>.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button onClick="{{ copyCode }}" style="height:46px;padding:0 20px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">{{ copyLabel }}</button>
+      <div style="font-size:13px;color:#6b675e">{{ lineInfo }}</div>
+    </div>
+    <textarea readOnly value="{{ code }}" style="width:100%;box-sizing:border-box;height:220px;border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5;color:#33312b;resize:vertical"></textarea>
+  </div>
+
+  <!-- STEP 4 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">4</div>
+      <div style="font-size:19px;font-weight:600">Click Deploy, then New deployment</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">In the top-right corner of the Apps Script page there is a blue <b>Deploy</b> button. Click it, then click <b>New deployment</b>.</div>
+    <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px 14px;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <span style="font-size:13px;color:#6b675e">Run</span><span style="font-size:13px;color:#6b675e">Debug</span>
+        <span style="background:oklch(0.5 0.14 255);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:6px;outline:2px solid oklch(0.62 0.15 60);outline-offset:3px">Deploy ▾</span>
+      </div>
+      <div style="background:#fff;border:1px solid #d6d2c8;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.08);font-size:13px;min-width:180px">
+        <div style="padding:8px 12px;background:oklch(0.95 0.05 70);font-weight:600;outline:2px solid oklch(0.62 0.15 60)">New deployment</div>
+        <div style="padding:8px 12px;color:#6b675e">Manage deployments</div>
+        <div style="padding:8px 12px;color:#6b675e">Test deployments</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">5</div>
+      <div style="font-size:19px;font-weight:600">Choose "Web app" and fill in two settings</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">A window opens. Next to <b>Select type</b>, click the small <b>gear icon</b> and choose <b>Web app</b>. Then set the two dropdowns exactly like this and click <b>Deploy</b>.</div>
+    <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:16px;display:flex;flex-direction:column;gap:12px;max-width:420px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:#6b675e">Select type</span><span style="width:22px;height:22px;border-radius:50%;border:1.5px solid #6b675e;outline:2px solid oklch(0.62 0.15 60);outline-offset:2px"></span><span style="font-weight:600">→ Web app</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#6b675e">Description (optional)</span><span style="border:1px solid #d6d2c8;background:#fff;border-radius:6px;padding:8px 10px;font-size:13px">Scanner</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#6b675e">Execute as</span><span style="border:1px solid #d6d2c8;background:oklch(0.95 0.05 70);border-radius:6px;padding:8px 10px;font-size:13px;font-weight:600;outline:2px solid oklch(0.62 0.15 60)">Me (your email)</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#6b675e">Who has access</span><span style="border:1px solid #d6d2c8;background:oklch(0.95 0.05 70);border-radius:6px;padding:8px 10px;font-size:13px;font-weight:600;outline:2px solid oklch(0.62 0.15 60)">Anyone</span></div>
+      <span style="align-self:flex-end;background:oklch(0.5 0.14 255);color:#fff;font-size:13px;font-weight:600;padding:7px 16px;border-radius:6px">Deploy</span>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">6</div>
+      <div style="font-size:19px;font-weight:600">Give permission (first time only)</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">Google asks if the code may use your sheet. Because you wrote it yourself, Google shows a warning. This is normal. Click through these four screens in order:</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e">SCREEN A</span><span>"Authorization required"</span><span style="align-self:flex-start;background:oklch(0.5 0.14 255);color:#fff;padding:6px 10px;border-radius:6px;font-weight:600;outline:2px solid oklch(0.62 0.15 60);outline-offset:2px">Authorize access</span></div>
+      <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e">SCREEN B</span><span>"Choose an account"</span><span style="align-self:flex-start;border:1px solid #d6d2c8;background:#fff;padding:6px 10px;border-radius:6px;font-weight:600;outline:2px solid oklch(0.62 0.15 60);outline-offset:2px">your email</span></div>
+      <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e">SCREEN C</span><span>"Google hasn't verified this app"</span><span style="color:#4a473f">Click <b style="text-decoration:underline">Advanced</b> (small, bottom left), then <b style="text-decoration:underline">Go to Untitled project (unsafe)</b></span></div>
+      <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e">SCREEN D</span><span>List of permissions</span><span style="align-self:flex-start;background:oklch(0.5 0.14 255);color:#fff;padding:6px 10px;border-radius:6px;font-weight:600;outline:2px solid oklch(0.62 0.15 60);outline-offset:2px">Allow</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">7</div>
+      <div style="font-size:19px;font-weight:600">Copy the link Google gives you</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">A box appears titled "New deployment" with a <b>Web app URL</b>. Click <b>Copy</b> under it. The link starts with <span style="font-family:'IBM Plex Mono',monospace;font-size:13px">https://script.google.com/macros/s/</span> and ends with <span style="font-family:'IBM Plex Mono',monospace;font-size:13px">/exec</span>. Paste it somewhere safe (an email to yourself works).</div>
+    <div style="border:1px solid #d6d2c8;border-radius:10px;background:#fbfaf7;padding:16px;display:flex;flex-direction:column;gap:6px;max-width:520px">
+      <span style="font-size:12px;color:#6b675e">Web app URL</span>
+      <span style="border:1px solid #d6d2c8;background:#fff;border-radius:6px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;word-break:break-all">https://script.google.com/macros/s/AKfy…long code…/exec</span>
+      <span style="align-self:flex-start;color:oklch(0.45 0.14 255);font-size:13px;font-weight:600;padding:4px 6px;outline:2px solid oklch(0.62 0.15 60);border-radius:4px">Copy</span>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="width:36px;height:36px;border-radius:50%;background:#1c1b18;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none">8</div>
+      <div style="font-size:19px;font-weight:600">Paste the link into the scanner</div>
+    </div>
+    <div style="font-size:15px;line-height:1.55;color:#33312b">Open the scanner, tap <b>Settings</b> (top right), paste the link into the box and tap <b>Connect</b>. The line under the title changes to <b>Connected · number of invoices · number of UPCs</b>. You only do this once per phone.</div>
+    <a href="index.html" style="align-self:flex-start;height:46px;padding:0 20px;border-radius:10px;background:#1c1b18;color:#fff;font:600 15px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Open the scanner</a>
+  </div>
+
+  <div style="padding:18px 20px;border:1px dashed #cfcbc0;border-radius:14px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55;color:#33312b">
+    <div style="font-weight:600;font-size:16px">If something goes wrong</div>
+    <div><b>"Could not load the sheets"</b> in the scanner: check that step 5 says <b>Anyone</b>, and that the link ends in <b>/exec</b>.</div>
+    <div><b>I changed the code later:</b> click Deploy → Manage deployments → pencil icon → Version: <b>New version</b> → Deploy. The link stays the same.</div>
+    <div><b>Camera won't start:</b> allow camera access when the phone asks. On iPhone use Safari, on Android use Chrome.</div>
+    <div><b>Privacy:</b> anyone who has the link can read the sheet data, so don't share it.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { code: 'Loading code…', copied: false };
+  componentDidMount() {
+    fetch('apps-script/Code.gs').then(r => r.text()).then(code => this.setState({ code })).catch(() => this.setState({ code: 'Could not load. Open apps-script/Code.gs in this project instead.' }));
+  }
+  renderVals() {
+    return {
+      code: this.state.code,
+      lineInfo: this.state.code.split('\n').length + ' lines',
+      copyLabel: this.state.copied ? 'Copied ✓' : 'Copy code',
+      copyCode: () => {
+        const done = () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 2500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(this.state.code).then(done, () => this.fallback(done)); else this.fallback(done);
+      }
+    };
+  }
+  fallback(done) {
+    const t = document.createElement('textarea'); t.value = this.state.code; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); done(); } catch (e) {} t.remove();
+  }
+}
+</script>
+</body>
+</html>
