@@ -2,6 +2,7 @@
 // Sign-in: add a DRIVERS tab with columns  Name | PIN | Role  (Role = admin or driver).
 // Assignments: add an ASSIGNMENTS tab with columns  InvoiceNumber | Driver | Stop  (the app fills it in).
 // Invoices not listed in ASSIGNMENTS go to the first driver in DRIVERS (driver 1).
+// Come-backs (broken / missing pieces, services to redo, $0) are saved to a COMEBACKS tab the app creates.
 // After pasting: run "authorize" once, then Deploy → Manage deployments → New version.
 
 const SHEETS = {
@@ -15,7 +16,8 @@ const SHEETS = {
   drivers: ['DRIVERS'],
   assignments: ['ASSIGNMENTS', 'ASSIGNMENT'],
   locations: ['DRIVER LOCATIONS'],
-  log: ['SCAN LOG']
+  log: ['SCAN LOG'],
+  comebacks: ['COMEBACKS', 'COME BACKS', 'COME-BACKS', 'COMEBACK']
 };
 const LOG_NAME = 'SCAN LOG';
 
@@ -109,12 +111,21 @@ function allData_(ss, u) {
     r['Driver'] = cur;
     if (smap[id]) { const sk = Object.keys(r).find(k => /^\s*stop/i.test(k)) || 'Stop'; r[sk] = smap[id]; }
   });
+  out.comebacks.forEach(r => {
+    const id = String(col_(r, /come.?back.?id|^cb.?id/i)).trim(); if (!id) return;
+    const dk = Object.keys(r).find(k => /driver/i.test(k)) || 'Driver';
+    if (amap[id]) r[dk] = amap[id];
+    if (!String(r[dk] || '').trim()) r[dk] = def;
+    if (smap[id]) { const sk = Object.keys(r).find(k => /^\s*stop/i.test(k)) || 'Stop'; r[sk] = smap[id]; }
+  });
   out.drivers = list.map(d => ({ Name: d.name, Role: d.role }));
   delete out.assignments;
   if (u && u.role !== 'admin') {
     out.invoices = out.invoices.filter(r => key_(r['Driver']) === key_(u.name));
     const ids = {};
     out.invoices.forEach(r => ids[invId_(r)] = 1);
+    out.comebacks = out.comebacks.filter(r => key_(col_(r, /driver/i)) === key_(u.name) || ids[String(col_(r, /^invoice/i)).trim()]);
+    out.comebacks.forEach(r => { const id = String(col_(r, /come.?back.?id|^cb.?id/i)).trim(); if (id) ids[id] = 1; });
     ['items', 'servicesold', 'log', 'deliveries'].forEach(k => out[k] = out[k].filter(r => ids[String(col_(r, /inv/i)).trim()]));
     out.drivers = [];
     out.locations = [];
@@ -287,6 +298,26 @@ function stops_(ss, p) {
   return { ok: true, saved: rows.length };
 }
 
+function comeback_(ss, p, u) {
+  if (!p.invoice) return { ok: false, error: 'Missing invoice number' };
+  let sh = findSheet_(ss, SHEETS.comebacks);
+  const head = ['Timestamp', 'ComebackID', 'Invoice', 'Date', 'Customer', 'Address', 'Items', 'Services', 'Reason', 'Note', 'Driver', 'Amount', 'CreatedBy'];
+  if (!sh) { sh = ss.insertSheet('COMEBACKS'); sh.appendRow(head); }
+  const cols = {};
+  head.forEach(h => cols[h] = ensureCol_(sh, h));
+  const w = sh.getLastColumn();
+  const n = read_(ss, SHEETS.comebacks).filter(r => String(col_(r, /^invoice/i)).trim() === String(p.invoice).trim()).length;
+  const id = String(p.invoice).trim() + '-CB' + (n + 1);
+  const row = new Array(w).fill('');
+  const put = (h, v) => { row[cols[h] - 1] = v; };
+  put('Timestamp', new Date()); put('ComebackID', id); put('Invoice', p.invoice); put('Date', p.date || '');
+  put('Customer', p.customer || ''); put('Address', p.address || ''); put('Items', p.items || ''); put('Services', p.services || '');
+  put('Reason', p.reason || ''); put('Note', p.note || ''); put('Driver', p.driver || ''); put('Amount', 0); put('CreatedBy', u ? u.name : '');
+  sh.getRange(sh.getLastRow() + 1, 1, 1, w).setValues([row]);
+  writeLog_(ss, [{ invoice: p.invoice, model: p.items || '', result: 'COMEBACK ' + id + (p.reason ? ' · ' + p.reason : '') }], u);
+  return { ok: true, id };
+}
+
 function authorize() {
   DriveApp.createFolder('scanner-permission-test').setTrashed(true);
   PropertiesService.getScriptProperties().getKeys();
@@ -319,6 +350,7 @@ function handle_(p) {
     if (p.action === 'log') return writeLog_(ss, JSON.parse(p.rows || '[]'), u);
     if (p.action === 'loc') return loc_(ss, p, u);
     if (p.action === 'assign') return admin ? assign_(ss, p) : { ok: false, error: 'Only admins can reassign invoices.' };
+    if (p.action === 'comeback') return comeback_(ss, p, u);
     if (p.action === 'stops') return admin ? stops_(ss, p) : { ok: false, error: 'Only admins can change stop order.' };
     return allData_(ss, u);
   } catch (err) {

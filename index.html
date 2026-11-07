@@ -143,6 +143,62 @@ input{font:inherit}
       </div>
     </sc-if>
 
+    <sc-if value="{{ cbForm }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:2px solid oklch(0.58 0.13 70);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-weight:600;font-size:16px">↩ Come back for invoice {{ cbForm.invoice }}</div>
+        <div style="font-size:13px;color:#55524a;line-height:1.45;text-wrap:pretty">Pick what has to be brought back or redone. It becomes a new stop with no charge ($0) and is saved to the COMEBACKS tab. Pieces you pick here no longer need to be delivered today.</div>
+        <sc-if value="{{ cbForm.hasItems }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:#6b675e">Pieces</div>
+            <sc-for list="{{ cbForm.items }}" as="it" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid {{ it.border }};border-radius:10px;background:{{ it.bg }}">
+                <div style="flex:1;min-width:0">
+                  <div style="font:500 14px 'IBM Plex Mono'">{{ it.model }}</div>
+                  <div style="font-size:11px;color:#6b675e">{{ it.sub }}</div>
+                </div>
+                <button onClick="{{ it.dec }}" aria-label="Fewer" style="width:40px;height:40px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:600 18px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">−</button>
+                <div style="width:28px;text-align:center;font:600 18px 'IBM Plex Mono'">{{ it.n }}</div>
+                <button onClick="{{ it.inc }}" aria-label="More" style="width:40px;height:40px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:600 18px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">+</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ cbForm.hasSvcs }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:#6b675e">Services to redo</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ cbForm.svcs }}" as="sv" hint-placeholder-count="2">
+                <button onClick="{{ sv.toggle }}" style="height:38px;padding:0 12px;border-radius:999px;border:1px solid {{ sv.border }};background:{{ sv.bg }};color:{{ sv.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ sv.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;color:#6b675e">Reason</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ cbForm.reasons }}" as="rs" hint-placeholder-count="4">
+              <button onClick="{{ rs.pick }}" style="height:36px;padding:0 12px;border-radius:999px;border:1px solid {{ rs.border }};background:{{ rs.bg }};color:{{ rs.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ rs.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Come-back date
+            <input type="date" value="{{ cbForm.date }}" onChange="{{ onCbDate }}" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Note (optional)
+            <input value="{{ cbForm.note }}" onChange="{{ onCbNote }}" placeholder="e.g. door dented, bring new one" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0">
+          </label>
+        </div>
+        <sc-if value="{{ cbForm.error }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13px;color:oklch(0.45 0.16 28);font-weight:500">{{ cbForm.error }}</div>
+        </sc-if>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onClick="{{ saveCb }}" style="height:46px;padding:0 18px;border:none;border-radius:10px;background:oklch(0.58 0.13 70);color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">{{ cbForm.saveLabel }}</button>
+          <button onClick="{{ closeCb }}" style="height:46px;padding:0 18px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 15px 'IBM Plex Sans';cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </sc-if>
+
     <sc-if value="{{ upcForm }}" hint-placeholder-val="{{ false }}">
       <div style="background:#fff;border:2px solid #1c1b18;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">
         <div style="font-weight:600;font-size:16px">{{ upcForm.title }}</div>
@@ -238,6 +294,17 @@ input{font:inherit}
               </div>
               <div style="padding:5px 10px;border-radius:999px;font-size:12px;font-weight:600;background:{{ lockedInv.pillBg }};color:{{ lockedInv.pillFg }}">{{ lockedInv.statusLabel }}</div>
             </div>
+            <sc-if value="{{ lockedInv.isCb }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 16px;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);font-size:13px;line-height:1.45;border-bottom:1px solid #eeebe4"><b>↩ Come-back for invoice {{ lockedInv.cbParent }}</b> · No charge ($0){{ lockedInv.cbWhy }}</div>
+            </sc-if>
+            <sc-if value="{{ lockedInv.hasCbs }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 16px;border-bottom:1px solid #eeebe4;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#6b675e;text-transform:uppercase;letter-spacing:0.06em">Come-backs</div>
+                <sc-for list="{{ lockedInv.cbs }}" as="cb" hint-placeholder-count="1">
+                  <button onClick="{{ cb.open }}" style="text-align:left;border:none;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);border-radius:8px;padding:8px 10px;font:500 13px 'IBM Plex Sans';cursor:pointer;line-height:1.4">↩ <b>{{ cb.id }}</b> · {{ cb.text }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
             <div style="padding:16px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #eeebe4;background:{{ lockedInv.counterBg }}">
               <div style="font-family:'IBM Plex Mono',monospace;font-size:46px;font-weight:600;line-height:1;color:{{ lockedInv.counterFg }};white-space:nowrap">{{ lockedInv.done }}<span style="font-size:24px;color:#6b675e">/{{ lockedInv.tot }}</span></div>
               <div style="flex:1;min-width:0">
@@ -324,6 +391,9 @@ input{font:inherit}
             </sc-if>
             <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap">
               <button onClick="{{ resetSession }}" style="height:44px;padding:0 16px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:500 14px 'IBM Plex Sans';cursor:pointer">Next invoice</button>
+              <sc-if value="{{ lockedInv.canCb }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ lockedInv.newCb }}" style="height:44px;padding:0 16px;border:1px solid oklch(0.58 0.13 70);border-radius:10px;background:#fff;color:oklch(0.42 0.1 70);font:600 14px 'IBM Plex Sans';cursor:pointer">↩ Come back needed</button>
+              </sc-if>
               <button onClick="{{ unlock }}" style="height:44px;padding:0 16px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 14px 'IBM Plex Sans';cursor:pointer">Wrong invoice</button>
             </div>
           </div>
@@ -385,6 +455,17 @@ input{font:inherit}
                 </div>
                 <div style="padding:5px 10px;border-radius:999px;font-size:12px;font-weight:600;background:{{ detailInv.pillBg }};color:{{ detailInv.pillFg }}">{{ detailInv.statusLabel }}</div>
               </div>
+            <sc-if value="{{ detailInv.isCb }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 16px;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);font-size:13px;line-height:1.45;border-bottom:1px solid #eeebe4"><b>↩ Come-back for invoice {{ detailInv.cbParent }}</b> · No charge ($0){{ detailInv.cbWhy }}</div>
+            </sc-if>
+            <sc-if value="{{ detailInv.hasCbs }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 16px;border-bottom:1px solid #eeebe4;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#6b675e;text-transform:uppercase;letter-spacing:0.06em">Come-backs</div>
+                <sc-for list="{{ detailInv.cbs }}" as="cb" hint-placeholder-count="1">
+                  <button onClick="{{ cb.open }}" style="text-align:left;border:none;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);border-radius:8px;padding:8px 10px;font:500 13px 'IBM Plex Sans';cursor:pointer;line-height:1.4">↩ <b>{{ cb.id }}</b> · {{ cb.text }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
               <div style="padding:14px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #eeebe4;background:{{ detailInv.counterBg }}">
                 <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;line-height:1;color:{{ detailInv.counterFg }};white-space:nowrap">{{ detailInv.done }}<span style="font-size:18px;color:#6b675e">/{{ detailInv.tot }}</span></div>
                 <div style="flex:1;min-width:0">
@@ -424,6 +505,9 @@ input{font:inherit}
               <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap">
                 <button onClick="{{ detailInv.scanIt }}" style="height:44px;padding:0 16px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:500 14px 'IBM Plex Sans';cursor:pointer">Scan against this invoice</button>
                 <button onClick="{{ detailInv.addSvc }}" style="height:44px;padding:0 16px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 14px 'IBM Plex Sans';cursor:pointer">+ Add service</button>
+                <sc-if value="{{ detailInv.canCb }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ detailInv.newCb }}" style="height:44px;padding:0 16px;border:1px solid oklch(0.58 0.13 70);border-radius:10px;background:#fff;color:oklch(0.42 0.1 70);font:600 14px 'IBM Plex Sans';cursor:pointer">↩ Come back needed</button>
+                </sc-if>
               </div>
             </div>
           </div>
@@ -459,7 +543,7 @@ input{font:inherit}
                       </sc-if>
                       <div style="min-width:0;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;line-height:1.3;word-break:break-all">{{ i.id }}</div>
                     </div>
-                    <div style="font-size:12px;color:#6b675e">{{ i.customer }} · {{ i.date }}</div>
+                    <div style="font-size:12px;color:#6b675e"><sc-if value="{{ i.isCb }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;margin-right:6px;padding:1px 6px;border-radius:5px;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);font:600 10px 'IBM Plex Sans';vertical-align:1px">↩ COME-BACK $0</span></sc-if>{{ i.customer }} · {{ i.date }}</div>
                   </div>
                   <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#55524a">{{ i.progress }}</div>
                   <div style="padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:{{ i.pillBg }};color:{{ i.pillFg }}">{{ i.statusLabel }}</div>
@@ -654,7 +738,7 @@ input{font:inherit}
                     <button onClick="{{ iv.down }}" aria-label="Move down" style="flex:none;width:36px;height:36px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:{{ iv.downFg }};font:600 14px 'IBM Plex Sans';cursor:pointer">▼</button>
                   </sc-if>
                 </div>
-                <div style="font-size:12px;color:#55524a">{{ iv.customer }} · {{ iv.prog }}</div>
+                <div style="font-size:12px;color:#55524a"><sc-if value="{{ iv.isCb }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;margin-right:6px;padding:1px 6px;border-radius:5px;background:oklch(0.93 0.06 80);color:oklch(0.42 0.1 70);font:600 10px 'IBM Plex Sans';vertical-align:1px">↩ COME-BACK $0</span></sc-if>{{ iv.customer }} · {{ iv.prog }}</div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b675e">Driver
                     <select value="{{ iv.driverVal }}" onChange="{{ iv.reassign }}" style="height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
@@ -835,6 +919,31 @@ const svcColor = st => { const s = String(st || '').toLowerCase();
   if (/pend|progress|sched|wait|hold/.test(s)) return ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'];
   return ['#ebe8e1', '#4a473f'];
 };
+const toYmd = str => { const v = String(str || '').trim(), p2 = n => String(n).padStart(2, '0');
+  const im = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/), dm = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (im) return im[1] + '-' + p2(im[2]) + '-' + p2(im[3]);
+  if (dm) return (dm[3].length === 2 ? '20' + dm[3] : dm[3]) + '-' + p2(dm[1]) + '-' + p2(dm[2]);
+  const t = Date.parse(v); return isNaN(t) ? '' : (d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()))(new Date(t)); };
+const ymdToUs = y => { const m = String(y || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (+m[2]) + '/' + (+m[3]) + '/' + m[1] : y; };
+const cbItemsTxt = items => Object.keys(items).filter(m => items[m] > 0).map(m => m + ' x' + items[m]).join('; ');
+function addComeback(inv, c) {
+  const parent = inv.get(c.parent); if (!c.parent) return;
+  const n = parent ? parent.cbs.length + 1 : 1;
+  const id = c.id || c.parent + '-CB' + n;
+  if (!inv.has(id)) inv.set(id, { id, date: '', customer: '', items: {}, services: [], cbs: [], cbOut: {} });
+  const o = inv.get(id);
+  Object.assign(o, { comeback: true, parent: c.parent, date: c.date || '', ymd: toYmd(c.date), customer: c.customer || (parent && parent.customer) || '',
+    address: c.address || (parent && parent.address) || '', driver: c.driver || (parent && parent.driver) || '', stop: String(c.stop || '').replace(/\D/g, ''),
+    reason: c.reason || '', note: c.note || '', paid: 'No charge', total: '0' });
+  String(c.items || '').split(/[;\n]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    const mm = x.match(/^(.+?)\s*[x×*]\s*(\d+)$/i), m = M(mm ? mm[1] : x), q = mm ? +mm[2] : 1;
+    o.items[m] = (o.items[m] || 0) + q;
+    if (parent) parent.cbOut[m] = (parent.cbOut[m] || 0) + q;
+  });
+  String(c.services || '').split(/[;\n]+/).map(x => x.trim()).filter(Boolean).forEach(sid => o.services.push({ rowId: '', sid, amount: '0', status: 'Come-back' }));
+  if (parent && !parent.cbs.some(x => x.id === id)) parent.cbs.push({ id, date: o.date, ymd: o.ymd, items: cbItemsTxt(o.items), services: o.services.map(x => x.sid).join(', '), reason: o.reason });
+  return id;
+}
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
 const saveSort = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
@@ -1062,7 +1171,7 @@ class Component extends DCLogic {
 
   parse(raw) {
     const inv = new Map();
-    const ensure = id => { if (!inv.has(id)) inv.set(id, { id, date: '', customer: '', items: {}, services: [] }); return inv.get(id); };
+    const ensure = id => { if (!inv.has(id)) inv.set(id, { id, date: '', customer: '', items: {}, services: [], cbs: [], cbOut: {} }); return inv.get(id); };
     (raw.invoices || []).forEach(r => {
       const id = pick(r, [/^invoice/i, /inv/i, /number|^no\b|#/i]); if (!id) return;
       const o = ensure(id); o.date = pick(r, [/sched|deliv/i, /date/i]);
@@ -1114,6 +1223,9 @@ class Component extends DCLogic {
     const drivers = (raw.drivers || []).map(r => ({ name: pick(r, [/name/i]), role: /admin/i.test(pick(r, [/role/i])) ? 'admin' : 'driver' })).filter(x => x.name);
     const defDrv = (drivers.find(x => x.role === 'driver') || drivers[0] || { name: '' }).name;
     if (defDrv) inv.forEach(o => { if (!o.driver) o.driver = defDrv; });
+    (raw.comebacks || []).forEach(r => addComeback(inv, { id: pick(r, [/come.?back.?id|^cb.?id/i]), parent: pick(r, [/^invoice/i, /^inv/i]), date: pick(r, [/^date$/i, /come.?back.?date|return|sched/i]),
+      customer: pick(r, [/cust/i]), address: pick(r, [/addr/i]), driver: pick(r, [/driver/i]), stop: pick(r, [/^\s*stop/i]),
+      items: pick(r, [/^items?$/i, /piece|model/i]), services: pick(r, [/^serv/i]), reason: pick(r, [/reason/i]), note: pick(r, [/note/i]) }));
     const locations = (raw.locations || []).map(r => ({ name: pick(r, [/name/i]), lat: parseFloat(pick(r, [/^lat/i])), lon: parseFloat(pick(r, [/^(lng|lon)/i])), updated: pick(r, [/updat|time/i]) })).filter(l => !isNaN(l.lat) && !isNaN(l.lon));
     return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, catCodes: Array.from(new Set(catCodes)).sort() };
   }
@@ -1194,6 +1306,38 @@ class Component extends DCLogic {
     }, () => {}, { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 });
   }
 
+  openCb(id) {
+    const o = this.state.data.invoices.get(id); if (!o) return;
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    const p2 = n => String(n).padStart(2, '0');
+    this.setState({ cbForm: { invoice: id, items: {}, svcs: {}, reason: '', note: '', date: t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()), saving: false, error: '' } });
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  setCb(p) { this.setState(s => ({ cbForm: s.cbForm ? { ...s.cbForm, error: '', ...p } : null })); }
+  async saveCb() {
+    const f = this.state.cbForm, d = this.state.data; if (!f || f.saving) return;
+    const o = d.invoices.get(f.invoice); if (!o) return;
+    const items = cbItemsTxt(f.items), svcs = Object.keys(f.svcs).filter(k => f.svcs[k]).join('; ');
+    if (!items && !svcs) return this.setCb({ error: 'Pick at least one piece or service.' });
+    if (!f.reason) return this.setCb({ error: 'Pick a reason.' });
+    if (!f.date) return this.setCb({ error: 'Pick a come-back date.' });
+    const row = { parent: o.id, date: ymdToUs(f.date), customer: o.customer, address: o.address, driver: o.driver, items, services: svcs, reason: f.reason, note: (f.note || '').trim() };
+    this.setCb({ saving: true });
+    let id = '';
+    if (!this.state.demo) {
+      try {
+        const j = await this.call({ action: 'comeback', invoice: row.parent, date: row.date, customer: row.customer, address: row.address, driver: row.driver, items: row.items, services: row.services, reason: row.reason, note: row.note });
+        if (j && j.invoices) throw new Error('Your Apps Script is the old version. Paste the new script and deploy a New version.');
+        if (!j || j.ok === false) throw new Error((j && j.error) || 'Could not save the come-back');
+        id = j.id;
+      } catch (e) { return this.setState(s => ({ cbForm: { ...s.cbForm, saving: false, error: e.message } })); }
+    }
+    this.setState(s => {
+      const inv = new Map(); s.data.invoices.forEach((v, k) => inv.set(k, { ...v, items: { ...v.items }, cbOut: { ...(v.cbOut || {}) }, cbs: (v.cbs || []).slice(), services: v.services.slice() }));
+      id = addComeback(inv, { ...row, id });
+      return { cbForm: null, data: { ...s.data, invoices: inv } };
+    }, () => { this.tone('done'); this.setFlash('done', 'Come-back ' + id + ' created', 'For ' + row.date + ' · no charge ($0)' + (this.state.demo ? ' · demo only' : ' · saved to COMEBACKS tab')); });
+  }
   setStopsLocal(rows) {
     this.setState(s => { const inv = new Map(s.data.invoices);
       rows.forEach(r => { const o = inv.get(r.invoice); if (o) inv.set(r.invoice, { ...o, stop: String(r.stop), driver: r.driver != null ? r.driver : o.driver }); });
@@ -1316,15 +1460,15 @@ class Component extends DCLogic {
     this.state.data.log.forEach(l => { if (l.invoice === inv && ok.indexOf(l.result) > -1) c[l.model] = (c[l.model] || 0) + 1; });
     return c;
   }
-  remaining(inv, m, mode) { const o = this.state.data.invoices.get(inv); if (!o) return 0; return (o.items[m] || 0) - (this.scanned(inv, mode)[m] || 0); }
+  remaining(inv, m, mode) { const o = this.state.data.invoices.get(inv); if (!o) return 0; const dm = (mode || this.state.mode) === 'deliver'; return (o.items[m] || 0) - (dm ? ((o.cbOut || {})[m] || 0) : 0) - (this.scanned(inv, mode)[m] || 0); }
   R(x) { return this.state.mode !== 'deliver' ? x : x === 'MATCH' ? 'DELIVERED' : x === 'MANUAL' ? 'DELIVERED_MANUAL' : 'DELIVERY_' + x; }
   status(o) {
-    const sc = this.scanned(o.id, 'load'), dv = this.scanned(o.id, 'deliver'); let tot = 0, done = 0, del = 0;
-    Object.keys(o.items).forEach(m => { tot += o.items[m]; done += Math.min(sc[m] || 0, o.items[m]); del += Math.min(dv[m] || 0, o.items[m]); });
+    const sc = this.scanned(o.id, 'load'), dv = this.scanned(o.id, 'deliver'), out = o.cbOut || {}; let tot = 0, done = 0, del = 0, tdel = 0;
+    Object.keys(o.items).forEach(m => { const need = Math.max(0, o.items[m] - (out[m] || 0)); tot += o.items[m]; tdel += need; done += Math.min(sc[m] || 0, o.items[m]); del += Math.min(dv[m] || 0, need); });
     const has = r => this.state.data.log.some(l => l.invoice === o.id && l.result === r);
     const ver = has('VERIFIED'), fin = has('DELIVERY_COMPLETE');
     const st = fin ? 'Complete' : tot === 0 ? 'Services' : del > 0 ? 'Delivering' : ver ? 'Loaded' : done >= tot ? 'Ready' : done > 0 ? 'Partial' : 'Open';
-    return { st, tot, done, del, label: st === 'Services' ? 'Services only' : st };
+    return { st, tot, done, del, tdel, label: st === 'Services' ? 'Services only' : st };
   }
 
   pendingCounts(extra) {
@@ -1418,8 +1562,8 @@ class Component extends DCLogic {
   afterMatch(id, model) {
     const s = this.status(this.state.data.invoices.get(id));
     if (this.state.mode === 'deliver') {
-      if (s.del >= s.tot) { this.tone('done'); this.setFlash('done', 'All items delivered for ' + id, 'Take a photo and get a signature below'); }
-      else { this.tone(true); this.setFlash('ok', model + ' ✓ delivered', s.del + ' of ' + s.tot + ' delivered on ' + id); }
+      if (s.del >= s.tdel) { this.tone('done'); this.setFlash('done', 'All items delivered for ' + id, 'Take a photo and get a signature below'); }
+      else { this.tone(true); this.setFlash('ok', model + ' ✓ delivered', s.del + ' of ' + s.tdel + ' delivered on ' + id); }
       return;
     }
     if (s.st === 'Ready') { this.tone('done'); this.setFlash('done', 'Ready: all items scanned for ' + id, 'Tap Confirm loaded below'); }
@@ -1524,11 +1668,13 @@ class Component extends DCLogic {
     this.setState({ proof: null }, () => { this.tone('done'); this.setFlash('done', 'Delivery complete: ' + L, 'Completed without photo or signature'); });
   }
   amountOf(o) {
+    if (o.comeback) return 0;
     const n = v => { const x = parseFloat(String(v || '').replace(/[^\d.\-]/g, '')); return isNaN(x) ? 0 : x; };
     if (o.total && !isNaN(parseFloat(String(o.total).replace(/[^\d.\-]/g, '')))) return n(o.total);
     return o.services.reduce((a, s) => a + n(s.amount), 0);
   }
   isPaid(o) {
+    if (o.comeback) return true;
     const p = String(o.paid || '').trim().toLowerCase();
     if (p) return !/^(no|n|unpaid|not|false|0|due|open|pending|owed|owing|balance)/.test(p);
     return o.services.length > 0 && o.services.every(s => /paid/i.test(s.status) && !/unpaid|not/i.test(s.status));
@@ -1595,7 +1741,8 @@ class Component extends DCLogic {
     const sc = this.scanned(o.id);
     const rows = Object.keys(o.items).map(m => {
       const q = o.items[m], d = Math.min(sc[m] || 0, q), ok = d >= q;
-      return { check: ok ? null : () => this.manualCheck(o.id, m), name: m, kind: 'Merchandise', count: d + ' / ' + q, mark: ok ? '✓' : '', boxBg: ok ? C.green : d > 0 ? C.amber : '#fff', boxBorder: ok || d > 0 ? 'none' : '1.5px solid #cfcbc0', countColor: ok ? C.green : C.ink };
+      const cbq = (o.cbOut || {})[m] || 0;
+      return { check: ok ? null : () => this.manualCheck(o.id, m), name: m, kind: 'Merchandise' + (cbq ? ' · ' + cbq + ' on come-back' : ''), count: d + ' / ' + q, mark: ok ? '✓' : '', boxBg: ok ? C.green : d > 0 ? C.amber : '#fff', boxBorder: ok || d > 0 ? 'none' : '1.5px solid #cfcbc0', countColor: ok ? C.green : C.ink };
     });
     const cat = this.state.data.cat || {};
     o.services.forEach(s => rows.push({
@@ -1610,13 +1757,17 @@ class Component extends DCLogic {
   }
   invView(o) {
     const s = this.status(o); const [bg, fg] = C.pill[s.st];
-    const dm = this.state.mode === 'deliver', dn = dm ? s.del : s.done;
-    const left = s.tot - dn, full = left <= 0 && s.tot > 0;
+    const dm = this.state.mode === 'deliver', dn = dm ? s.del : s.done, tt = dm ? s.tdel : s.tot;
+    const left = tt - dn, full = left <= 0 && s.tot > 0;
+    const par = o.comeback && this.state.data.invoices.get(o.parent);
     return {
       id: o.id, customer: o.customer || 'No customer', date: o.date || 'No date', statusLabel: s.label, pillBg: bg, pillFg: fg,
-      progress: s.tot ? dn + '/' + s.tot : '', st: s.st, done: dn, tot: s.tot,
-      pct: (s.tot ? Math.round(dn / s.tot * 100) : 0) + '%',
-      counterText: s.tot === 0 ? 'No merchandise to scan' : dm ? (full ? (s.st === 'Complete' ? 'Delivered' : 'All delivered: add photo and signature') : left === 1 ? '1 item left to deliver' : left + ' items left to deliver') : full ? (s.st === 'Ready' ? 'Ready: tap Confirm loaded' : 'Loaded') : left === 1 ? '1 item left: last one' : left + ' items left',
+      progress: s.tot ? dn + '/' + tt : '', st: s.st, done: dn, tot: tt,
+      pct: (tt ? Math.round(dn / tt * 100) : s.tot ? 100 : 0) + '%',
+      isCb: !!o.comeback, cbParent: o.parent || '', cbWhy: o.comeback ? (o.reason ? ' · ' + o.reason : '') + (o.note ? ' · ' + o.note : '') : '',
+      hasCbs: !!(o.cbs && o.cbs.length), cbs: (o.cbs || []).map(c => ({ id: c.id, text: [ymdToUs(c.ymd) || c.date, c.items, c.services, c.reason].filter(Boolean).join(' · '), open: () => this.setState({ tab: 'invoices', detail: c.id, locked: this.state.tab === 'scan' ? null : this.state.locked }) })),
+      canCb: !o.comeback && (Object.keys(o.items).length > 0 || o.services.length > 0), newCb: () => this.openCb(o.id),
+      counterText: s.tot === 0 ? 'No merchandise to scan' : dm ? (full ? (s.st === 'Complete' ? 'Delivered' : tt < s.tot ? 'Rest is on a come-back: add photo and signature' : 'All delivered: add photo and signature') : left === 1 ? '1 item left to deliver' : left + ' items left to deliver') : full ? (s.st === 'Ready' ? 'Ready: tap Confirm loaded' : 'Loaded') : left === 1 ? '1 item left: last one' : left + ' items left',
       counterFg: full ? 'oklch(0.38 0.1 150)' : C.ink, counterBg: full ? 'oklch(0.95 0.04 150)' : '#fbfaf7', barColor: full ? C.green : C.amber,
       stop: o.stop, hasStop: !!o.stop, address: o.address, hasAddr: !!o.address,
       mapUrl: o.address ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(o.address) : ''
@@ -1686,6 +1837,21 @@ class Component extends DCLogic {
       saveSvc: () => this.svcAction(st.svcForm && st.svcForm.isNew ? 'add' : 'update'),
       deleteSvc: () => this.svcAction('delete'),
       closeSvc: () => this.setState({ svcForm: null }),
+      cbForm: (() => {
+        const f = st.cbForm, o = f && d && d.invoices.get(f.invoice); if (!o) return null;
+        const items = Object.keys(o.items).map(m => {
+          const max = Math.max(0, o.items[m] - ((o.cbOut || {})[m] || 0)), n = f.items[m] || 0;
+          return { model: m, n, sub: 'On invoice: ' + o.items[m] + (o.cbOut && o.cbOut[m] ? ' · ' + o.cbOut[m] + ' already on a come-back' : ''),
+            bg: n ? 'oklch(0.96 0.04 80)' : '#fff', border: n ? 'oklch(0.58 0.13 70)' : '#e2dfd7',
+            dec: () => this.setCb({ items: { ...f.items, [m]: Math.max(0, n - 1) } }), inc: () => this.setCb({ items: { ...f.items, [m]: Math.min(max, n + 1) } }) };
+        });
+        const cat = d.cat || {};
+        const svcs = o.services.map(x => { const on = !!f.svcs[x.sid]; return { label: (on ? '✓ ' : '') + x.sid + (cat[M(x.sid)] ? ' · ' + cat[M(x.sid)] : ''), toggle: () => this.setCb({ svcs: { ...f.svcs, [x.sid]: !on } }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; });
+        const reasons = ['Broken', 'Damaged', 'Missing parts', 'Wrong item', 'Customer not ready', 'Other'].map(r => { const on = f.reason === r; return { label: r, pick: () => this.setCb({ reason: r }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; });
+        return { invoice: f.invoice, items, hasItems: items.length > 0, svcs, hasSvcs: svcs.length > 0, reasons, date: f.date, note: f.note, error: f.error, saveLabel: f.saving ? 'Saving…' : 'Create $0 come-back' };
+      })(),
+      onCbDate: e => this.setCb({ date: e.target.value }), onCbNote: e => this.setCb({ note: e.target.value }),
+      saveCb: () => this.saveCb(), closeCb: () => this.setState({ cbForm: null }),
       svcStatusOpts: (() => { const cur = st.svcForm ? String(st.svcForm.status || '').trim() : '';
         const seen = d ? Array.from(d.invoices.values()).flatMap(o => o.services.map(x => String(x.status || '').trim())).filter(Boolean) : [];
         const list = []; ['Open', 'Paid', 'Unpaid', 'Complete', 'Cancelled'].concat(seen).forEach(x => { if (!list.some(y => y.toLowerCase() === x.toLowerCase())) list.push(x); });
@@ -1701,7 +1867,7 @@ class Component extends DCLogic {
     const Ls = L && this.status(L), dl = L && (d.deliveries || []).filter(x => x.invoice === L.id).pop();
     const lockedInv = L ? { ...this.invView(L), rows: this.rowsFor(L),
       needsConfirm: st.mode !== 'deliver' && Ls.st === 'Ready', verified: st.mode !== 'deliver' && verified && Ls.st !== 'Complete',
-      needsProof: st.mode === 'deliver' && Ls.del >= Ls.tot && Ls.st !== 'Complete', delivered: Ls.st === 'Complete',
+      needsProof: st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', delivered: Ls.st === 'Complete',
       deliveredText: dl ? 'Delivered' + (dl.receiver ? ', received by ' + dl.receiver : '') + '. Photo and signature saved.' : 'Delivered without photo or signature.',
       photoLink: dl ? dl.photo : '', sigLink: dl ? dl.sig : '', hasPhotoLink: !!(dl && dl.photo), hasSigLink: !!(dl && dl.sig) } : null;
     const pf = L && st.proof && st.proof.inv === L.id ? st.proof : { photo: '', receiver: '', signed: false };
@@ -1849,7 +2015,7 @@ class Component extends DCLogic {
         const row = o => {
           const s = this.status(o), [bg, fg] = C.pill[s.st], ow = owner(o), dl = (d.deliveries || []).filter(x => x.invoice === o.id).pop();
           return { id: o.id, customer: o.customer || 'No customer', stop: o.stop, hasStop: !!o.stop, statusLabel: s.label, pillBg: bg, pillFg: fg,
-            prog: s.tot ? 'Loaded ' + s.done + '/' + s.tot + ' · Delivered ' + s.del + '/' + s.tot : 'Services only',
+            prog: s.tot ? 'Loaded ' + s.done + '/' + s.tot + ' · Delivered ' + s.del + '/' + s.tdel : 'Services only', isCb: !!o.comeback,
             driverVal: ow ? ow.name : '', opts, reassign: e => this.assign(o.id, e.target.value),
             canMove: !!(ow && canOrder), upFg: C.ink, downFg: C.ink, up: () => ow && this.moveStop(ow.name, o.id, -1), down: () => ow && this.moveStop(ow.name, o.id, 1), open: () => this.setState({ tab: 'invoices', detail: o.id }),
             hasPhoto: !!(dl && dl.photo), photo: dl ? dl.photo : '', hasSig: !!(dl && dl.sig), sig: dl ? dl.sig : '', receiver: dl && dl.receiver ? 'Received by ' + dl.receiver : '' };
@@ -1914,8 +2080,8 @@ class Component extends DCLogic {
           return { id: x.o.id, sub: [x.o.customer || 'No customer', x.o.date || 'No date', x.o.driver || 'Unassigned'].join(' · '),
             delivery: s.st === 'Complete' ? 'Delivered' : 'Delivery: ' + s.label, amount: usd(x.amt),
             hasSvc: x.o.services.length > 0, svcs: x.o.services.map(v => ({ label: v.sid + ' · ' + (v.status || 'No status'), bg: svcColor(v.status)[0], fg: svcColor(v.status)[1] })),
-            payLabel: x.paid ? (pm && !/^(y|yes|paid|true|1|x|✓|✔)$/i.test(pm) ? 'Paid · ' + pm : 'Paid') : 'Unpaid',
-            payBg: x.paid ? C.pill.Complete[0] : 'oklch(0.93 0.05 27)', payFg: x.paid ? C.pill.Complete[1] : 'oklch(0.42 0.15 27)',
+            payLabel: x.o.comeback ? 'Come-back · no charge' : x.paid ? (pm && !/^(y|yes|paid|true|1|x|✓|✔)$/i.test(pm) ? 'Paid · ' + pm : 'Paid') : 'Unpaid',
+            payBg: x.o.comeback ? 'oklch(0.93 0.06 80)' : x.paid ? C.pill.Complete[0] : 'oklch(0.93 0.05 27)', payFg: x.o.comeback ? 'oklch(0.42 0.1 70)' : x.paid ? C.pill.Complete[1] : 'oklch(0.42 0.15 27)',
             open: () => this.setState({ tab: 'invoices', detail: x.o.id }) };
         });
         const sortOpts = [['new', 'Date: newest first'], ['old', 'Date: oldest first'], ['status', 'Delivery status'], ['unpaid', 'Unpaid first'], ['paid', 'Paid first'], ['amount', 'Amount: highest first']].map(([v, label]) => ({ v, label }));
