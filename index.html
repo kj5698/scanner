@@ -576,6 +576,46 @@ input{font:inherit}
         <div style="border-radius:14px;overflow:hidden;border:1px solid #e2dfd7;background:#e9e6df">
           <div id="routemap" style="width:100%;height:340px"></div>
         </div>
+
+        <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0;font-weight:600;font-size:15px">Van range</div>
+            <div style="font:600 24px 'IBM Plex Mono';line-height:1">{{ van.rangeText }}</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;color:#33312b">
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Battery now
+              <input value="{{ van.pct }}" onChange="{{ van.onPct }}" inputMode="decimal" placeholder="—" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">%</label>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Pack
+              <select value="{{ van.kwh }}" onChange="{{ van.onKwh }}" style="height:36px;padding:0 6px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
+                <sc-for list="{{ van.kwhOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+              </select></label>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Efficiency
+              <input value="{{ van.eff }}" onChange="{{ van.onEff }}" inputMode="decimal" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi/kWh</label>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <div style="font-size:12px;color:#6b675e;margin-right:2px">Load today</div>
+            <sc-for list="{{ van.loads }}" as="f" hint-placeholder-count="3">
+              <button onClick="{{ f.pick }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:#55524a;line-height:1.45">{{ van.wxText }}</div>
+          <div style="font-size:12px;color:#6b675e;line-height:1.45;font-family:'IBM Plex Mono',monospace">{{ van.calcText }}</div>
+          <sc-if value="{{ van.needText }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px;line-height:1.45;padding:8px 10px;border-radius:8px;background:{{ van.needBg }};color:{{ van.needFg }}">{{ van.needText }}</div>
+          </sc-if>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b675e;flex-wrap:wrap">Or type the range from FordPass
+            <input value="{{ van.override }}" onChange="{{ van.onOverride }}" inputMode="decimal" placeholder="—" style="width:64px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi <span>(overrides the estimate)</span></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Warehouse address
+            <div style="display:flex;gap:8px">
+              <input value="{{ van.depotDraft }}" onChange="{{ van.onDepot }}" placeholder="Street address, Carteret, NJ" style="flex:1;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:14px;color:#1c1b18;min-width:0">
+              <button onClick="{{ van.saveDepot }}" style="flex:none;height:40px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ van.depotBtn }}</button>
+            </div>
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#fbfaf7;border:1px solid #eeebe4">
+            <div style="flex:1;min-width:0;font-size:12px;color:#33312b;line-height:1.4"><b>Charger by the warehouse:</b> Carteret Tesla Supercharger, 793 Roosevelt Ave. Top up here before you leave when the van needs it.</div>
+            <a href="{{ van.whChNav }}" target="_blank" rel="noopener" style="flex:none;height:36px;padding:0 12px;border-radius:8px;background:oklch(0.5 0.14 255);color:#fff;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Navigate</a>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#55524a">{{ routeStatus }}</div>
           <sc-if value="{{ fullRouteUrl }}" hint-placeholder-val="{{ false }}">
@@ -613,13 +653,13 @@ input{font:inherit}
               </div>
             </sc-if>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <sc-if value="{{ van.hasDepot }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ van.toggleWh }}" style="height:36px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid #1c1b18;background:{{ van.whBg }};color:{{ van.whFg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ van.whLabel }}</button>
+              </sc-if>
               <button onClick="{{ toggleLoc }}" style="height:36px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid #1c1b18;background:{{ locBg }};color:{{ locFg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ locLabel }}</button>
               <sc-if value="{{ showRound }}" hint-placeholder-val="{{ false }}">
                 <button onClick="{{ toggleRound }}" style="height:36px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid #1c1b18;background:{{ roundBg }};color:{{ roundFg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ roundLabel }}</button>
               </sc-if>
-              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#33312b;white-space:nowrap">Range left
-                <input value="{{ range }}" onChange="{{ onRange }}" inputMode="decimal" placeholder="—" style="width:64px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:right">
-              mi</label>
             </div>
           </div>
         </sc-if>
@@ -950,6 +990,12 @@ function addComeback(inv, c) {
   if (parent && !parent.cbs.some(x => x.id === id)) parent.cbs.push({ id, date: o.date, ymd: o.ymd, items: cbItemsTxt(o.items), services: o.services.map(x => x.sid).join(', '), reason: o.reason });
   return id;
 }
+const WH_CHARGER = { name: 'Carteret Tesla Supercharger (by the warehouse)', address: '793 Roosevelt Ave, Carteret, NJ 07008', lat: 40.588656, lon: -74.226882, type: 'NACS Supercharger · by the warehouse' };
+const CARTERET = { lat: 40.5773, lon: -74.2282 };
+const LOADS = { light: ['Light', 1.05], normal: ['Normal', 1], heavy: ['Heavy', 0.9] };
+const tempFactor = f => f == null ? 1 : f >= 85 ? 0.92 : f >= 65 ? 1 : f >= 50 ? 0.95 : f >= 32 ? 0.85 : f >= 20 ? 0.75 : 0.65;
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const RES_MIN = 10, RES_MAX = 30; // charge when about 10–30 mi of range are left
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
@@ -980,12 +1026,15 @@ class Component extends DCLogic {
     authNeeded: false, pinNames: [], pinName: localStorage.getItem('scanchk.pinname') || '', pin: '', loginErr: '', loginBusy: false, linkCopied: false,
     routeInfo: null, chargers: null, useLoc: false, myLoc: null, roundTrip: false, locErr: '',
     range: localStorage.getItem('scanchk.range') || '',
+    battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null, startFrom: '',
     geo: (() => { try { return JSON.parse(localStorage.getItem('scanchk.geo') || '{}'); } catch (e) { return {}; } })()
   };
 
   componentDidMount() {
     try {
-      const api = new URLSearchParams(location.search).get('api');
+      const qs = new URLSearchParams(location.search), dep = qs.get('depot');
+      if (dep) { lsSet('scanchk.depot', dep); this.state.depot = dep; this.state.depotDraft = dep; }
+      const api = qs.get('api');
       if (api && /^https:\/\/script\.google/.test(api)) {
         localStorage.setItem('scanchk.url', api);
         this.state.url = api; this.state.urlDraft = api; this.state.demo = false;
@@ -993,6 +1042,7 @@ class Component extends DCLogic {
       }
     } catch (e) {}
     this.load();
+    this.fetchWx();
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
@@ -1142,6 +1192,29 @@ class Component extends DCLogic {
     if (c.lat != null) return { lat: c.lat, lon: c.lon };
     const g = this.state.geo[c.address]; return g && g !== 'x' ? g : null;
   }
+  async fetchWx() {
+    const st = this.state, dg = st.depot && st.geo[st.depot] && st.geo[st.depot] !== 'x' ? st.geo[st.depot] : null;
+    const at = dg || CARTERET, place = dg ? 'the warehouse' : 'Carteret, NJ';
+    const key = at.lat.toFixed(2) + ',' + at.lon.toFixed(2) + ':' + this.days().today;
+    if (this._wxKey === key) return; this._wxKey = key;
+    try {
+      const j = await (await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + at.lat + '&longitude=' + at.lon + '&hourly=temperature_2m,precipitation,snowfall&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=3')).json();
+      const h = j.hourly || {}, byDay = {};
+      (h.time || []).forEach((t, i) => { const day = t.slice(0, 10), hr = +t.slice(11, 13); if (hr < 8 || hr > 18) return;
+        const b = byDay[day] || (byDay[day] = { temps: [], rain: 0, snow: 0 }); b.temps.push(h.temperature_2m[i]); b.rain += h.precipitation[i] || 0; b.snow += h.snowfall[i] || 0; });
+      const days = {}; Object.keys(byDay).forEach(k => { const b = byDay[k]; days[k] = { avg: b.temps.reduce((a, x) => a + x, 0) / b.temps.length, lo: Math.min(...b.temps), hi: Math.max(...b.temps), rain: b.rain, snow: b.snow }; });
+      this.setState({ wx: { days, place } });
+    } catch (e) { this.setState({ wx: { error: true, place } }); }
+  }
+  rangeInfo() {
+    const st = this.state, dd = this.days(), day = st.day === 'tomorrow' ? dd.tomorrow : dd.today;
+    const w = st.wx && st.wx.days ? st.wx.days[day] : null;
+    const tf = w ? tempFactor(w.avg) : 1, pf = w ? (w.snow > 0.2 ? 0.85 : w.rain > 0.1 ? 0.95 : 1) : 1, lf = (LOADS[st.load] || LOADS.normal)[1];
+    const eff = parseFloat(st.eff) || 2.6, kwh = parseFloat(st.battKwh) || 68, pct = parseFloat(st.battPct);
+    const effDay = eff * tf * pf * lf, ov = parseFloat(st.range);
+    const est = !isNaN(pct) ? kwh * Math.min(pct, 100) / 100 * effDay : null;
+    return { day, w, tf, pf, lf, eff, kwh, pct, effDay, est, override: isNaN(ov) ? null : ov, mi: !isNaN(ov) ? ov : est };
+  }
   nearSaved() {
     const ri = this.state.routeInfo, d = this.state.data;
     if (!ri || !ri.geom || !d || !d.saved || !d.saved.length) return [];
@@ -1155,7 +1228,7 @@ class Component extends DCLogic {
       const p = this.savedPos(c); if (!p) return;
       let best = 1e9, at = 0;
       this._samp.forEach((s, i) => { const x = hav(s, [p.lat, p.lon]); if (x < best) { best = x; at = this._cums[i]; } });
-      if (best <= 10) out.push({ lat: p.lat, lon: p.lon, name: c.name, type: 'Saved in your list', stalls: '', off: best, at, saved: true, nav: 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + p.lat + ',' + p.lon });
+      if (best <= 10) out.push({ lat: p.lat, lon: p.lon, name: c.name, type: c.type || 'Saved in your list', stalls: '', off: best, at, saved: true, nav: 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + p.lat + ',' + p.lon });
     });
     return out;
   }
@@ -1243,6 +1316,7 @@ class Component extends DCLogic {
       customer: pick(r, [/cust/i]), address: pick(r, [/addr/i]), driver: pick(r, [/driver/i]), stop: pick(r, [/^\s*stop/i]),
       items: pick(r, [/^items?$/i, /piece|model/i]), services: pick(r, [/^serv/i]), reason: pick(r, [/reason/i]), note: pick(r, [/note/i]) }));
     const locations = (raw.locations || []).map(r => ({ name: pick(r, [/name/i]), lat: parseFloat(pick(r, [/^lat/i])), lon: parseFloat(pick(r, [/^(lng|lon)/i])), updated: pick(r, [/updat|time/i]) })).filter(l => !isNaN(l.lat) && !isNaN(l.lon));
+    if (!saved.some(c => c.lat != null && hav([c.lat, c.lon], [WH_CHARGER.lat, WH_CHARGER.lon]) < 0.2)) saved.push({ ...WH_CHARGER, builtin: true });
     return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, catCodes: Array.from(new Set(catCodes)).sort() };
   }
 
@@ -1815,9 +1889,9 @@ class Component extends DCLogic {
       onPinKey: e => { if (e.key === 'Enter') this.doLogin(); },
       submitPin: () => this.doLogin(), pinBtn: st.loginBusy ? 'Signing in…' : 'Sign in',
       signOut: () => this.signOut(),
-      showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url); } catch (e) { return ''; } })(),
+      showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); } catch (e) { return ''; } })(),
       copyLabel: st.linkCopied ? 'Copied ✓' : 'Copy',
-      copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
+      copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
       days: (() => { const dd = this.days(); return [['today', 'Today ' + dd.tl], ['tomorrow', 'Tomorrow ' + dd.ml], ['both', 'Both']].map(([k, l]) => { const on = st.day === k; return { label: l, pick: () => { localStorage.setItem('scanchk.day', k); this.setState({ day: k, routeSel: null, locked: null, scans: [], flash: null }); }, bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }); })(),
       demo: st.demo, showSettings: st.settings, urlDraft: st.urlDraft, errText: st.err,
       sourceLabel: st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
@@ -1875,7 +1949,7 @@ class Component extends DCLogic {
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -1936,7 +2010,7 @@ class Component extends DCLogic {
       const li = locIds.indexOf(rl[i].o.id), lg = li < 0 ? null : ri.fromLoc ? ri.legs[li] : li > 0 ? ri.legs[li - 1] : null;
       r.leg = lg != null ? '+' + lg.toFixed(1) + ' mi' : li === 0 ? 'start' : '';
     });
-    const rng = parseFloat(st.range), mi = ri && ri.miles;
+    const RI = this.rangeInfo(), rng = RI.mi, mi = ri && ri.miles;
     let warn = '', warnBg = '', warnFg = '';
     if (rng && mi) {
       const endLeft = rng - mi;
@@ -1947,7 +2021,7 @@ class Component extends DCLogic {
     const trip = {
       miles: mi != null ? mi.toFixed(1) + ' mi' : '—',
       sub: ri && ri.mins ? 'about ' + fmtMins(ri.mins) + ' driving' : ri && ri.error ? ri.error : ri && ri.loading ? 'Calculating…' : rl.length ? (pendingGeo ? 'Waiting for stops to appear on the map…' : 'Need at least 2 stops on the map') : '',
-      note: (st.useLoc && st.myLoc ? 'From your location' : 'From the first stop') + (st.useLoc && st.myLoc && st.roundTrip ? ', returning to start.' : ', one way.') + ' Time does not include stops or charging.' + (st.locErr ? ' ' + st.locErr : ''),
+      note: (st.useLoc && st.myLoc ? (st.startFrom === 'warehouse' ? 'From the warehouse' : 'From your location') : 'From the first stop') + (st.useLoc && st.myLoc && st.roundTrip ? ', returning to start.' : ', one way.') + ' Time does not include stops or charging.' + (st.locErr ? ' ' + st.locErr : ''),
       warn, warnBg, warnFg
     };
     const allCh = this.allChargers(), nSaved = allCh.filter(c => c.saved).length;
@@ -1963,7 +2037,8 @@ class Component extends DCLogic {
     const rs = rl.find(s => s.o.id === st.routeSel);
     const routeSel = rs ? { stopLabel: 'STOP ' + rs.num, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: rs.v.progress || '0/0', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null;
     const rTake = rl.slice(0, 9);
-    let fullRouteUrl = rl.length > 1 ? 'https://www.google.com/maps/dir/Current+Location/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') : '';
+    const whStart = st.startFrom === 'warehouse' && st.useLoc && st.depot, origin = whStart ? encodeURIComponent(st.depot) : 'Current+Location', tail = whStart && st.roundTrip ? '/' + encodeURIComponent(st.depot) : '';
+    let fullRouteUrl = rl.length > 1 || whStart ? 'https://www.google.com/maps/dir/' + origin + '/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') + tail : '';
     let fullRouteLabel = rl.length > 9 ? 'Navigate first 9 stops' : 'Navigate all ' + rl.length + ' stops', chargePlan = null;
     const needCharge = !!(rng && mi && rng - mi < RES_MAX);
     if (needCharge && ri && ri.legs) {
@@ -1980,7 +2055,7 @@ class Component extends DCLogic {
         const located = rl.filter(s => s.o.id in cumById).slice(0, 8);
         const before = located.filter(s => cumById[s.o.id] < best.at), after = located.filter(s => cumById[s.o.id] >= best.at);
         const parts = before.map(s => encodeURIComponent(s.o.address)).concat([best.lat + ',' + best.lon], after.map(s => encodeURIComponent(s.o.address)));
-        fullRouteUrl = 'https://www.google.com/maps/dir/Current+Location/' + parts.join('/');
+        fullRouteUrl = 'https://www.google.com/maps/dir/' + origin + '/' + parts.join('/') + tail;
         fullRouteLabel = 'Navigate stops + charge stop';
         chargePlan = { ok: true, name: best.name, nav: best.nav, url: fullRouteUrl,
           text: 'Charge stop added after stop ' + (before.length ? before[before.length - 1].num : 'start') + ', around mile ' + Math.round(best.at) + (best.off >= 0.1 ? ', ' + best.off.toFixed(1) + ' mi off route' : ', on route') + '. You will have about ' + bestLeft + ' mi left when you get there' + (inWin ? '.' : ' (no fast NACS charger where you would be down to ' + RES_MIN + '–' + RES_MAX + ' mi, so this is the last good one before that).'),
@@ -2015,14 +2090,46 @@ class Component extends DCLogic {
       lockedInv, confirmInv, cands,
       trip, chargerList, chargeStatus, hasRoute: rl.length > 0,
       chRetry: !!(chs && chs.canRetry), retryChargers: () => { if (ri && ri.geom) { this.setState({ chargers: null }); this.findChargers(ri.key, ri.geom); } },
+      van: (() => {
+        const num = e => e.target.value.replace(/[^\d.]/g, '');
+        const w = RI.w, f2 = x => x.toFixed(2).replace(/0$/, '');
+        const dayTxt = RI.day === this.days().today ? 'today' : 'tomorrow';
+        const wxText = !st.wx ? 'Getting the weather…' : st.wx.error ? 'Weather unavailable, so no weather adjustment.' : !w ? 'No forecast for that day yet.' :
+          'Weather ' + dayTxt + ' near ' + st.wx.place + ' (8am–6pm): about ' + Math.round(w.avg) + '°F (' + Math.round(w.lo) + '–' + Math.round(w.hi) + '°F)' + (w.snow > 0.2 ? ', snow' : w.rain > 0.1 ? ', rain' : ', dry') + '. Temperature ×' + f2(RI.tf) + (RI.pf < 1 ? ', ' + (w.snow > 0.2 ? 'snow' : 'rain') + ' ×' + f2(RI.pf) : '') + (RI.lf !== 1 ? ', load ×' + f2(RI.lf) : '') + ' → about ' + RI.effDay.toFixed(2) + ' mi/kWh ' + dayTxt + '.';
+        const calcText = RI.override != null ? 'Using the FordPass range you typed: ' + Math.round(RI.override) + ' mi.' : RI.est != null ? RI.kwh + ' kWh × ' + Math.round(RI.pct) + '% × ' + RI.effDay.toFixed(2) + ' mi/kWh = ' + Math.round(RI.est) + ' mi' : 'Enter the battery % to estimate the range.';
+        let needText = '', needBg = '', needFg = '';
+        if (mi) {
+          const need = Math.min(100, Math.ceil((mi + 20) / RI.effDay / RI.kwh * 100));
+          needText = 'This route is ' + mi.toFixed(0) + ' mi. To finish with about 20 mi to spare you need about ' + need + '% battery at the start' + (need >= 100 ? ' (more than a full charge, so plan a charge stop)' : '') + '.';
+          const ok = !isNaN(RI.pct) && RI.override == null ? RI.pct >= need : rng ? rng - mi >= 20 : null;
+          needBg = ok === false ? 'oklch(0.93 0.05 27)' : ok ? 'oklch(0.95 0.04 150)' : '#fbfaf7'; needFg = ok === false ? 'oklch(0.4 0.14 27)' : ok ? 'oklch(0.34 0.09 150)' : '#33312b';
+          if (ok === false && st.startFrom === 'warehouse') needText += ' Charge at the Carteret Supercharger by the warehouse before you leave.';
+        }
+        const whOn = st.useLoc && st.startFrom === 'warehouse';
+        return { rangeText: rng ? '≈ ' + Math.round(rng) + ' mi' : '— mi', pct: st.battPct, eff: st.eff, kwh: st.battKwh, override: st.range,
+          kwhOpts: [['68', '68 kWh (standard)'], ['89', '89 kWh (extended range)']].concat(['68', '89'].includes(st.battKwh) ? [] : [[st.battKwh, st.battKwh + ' kWh']]).map(([v, label]) => ({ v, label })),
+          onPct: e => { const v = num(e); lsSet('scanchk.batt', v); this.setState({ battPct: v }); },
+          onKwh: e => { lsSet('scanchk.kwh', e.target.value); this.setState({ battKwh: e.target.value }); },
+          onEff: e => { const v = num(e); lsSet('scanchk.eff', v); this.setState({ eff: v }); },
+          onOverride: e => { const v = num(e); lsSet('scanchk.range', v); this.setState({ range: v }); },
+          loads: Object.keys(LOADS).map(k => { const on = st.load === k; return { label: LOADS[k][0], pick: () => { lsSet('scanchk.load', k); this.setState({ load: k }); }, bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }),
+          wxText, calcText, needText, needBg, needFg,
+          depotDraft: st.depotDraft, onDepot: e => this.setState({ depotDraft: e.target.value }),
+          depotBtn: st.depotDraft.trim() === st.depot ? (st.depot ? 'Saved ✓' : 'Save') : 'Save',
+          saveDepot: () => { const v = st.depotDraft.trim(); lsSet('scanchk.depot', v); this._wxKey = ''; this.setState({ depot: v }, () => { if (v) this.geocodeOne(v).then(() => { this._wxKey = ''; this.fetchWx(); }); }); },
+          hasDepot: !!st.depot, whLabel: whOn ? '✓ Start from warehouse' : 'Start from warehouse', whBg: whOn ? C.ink : '#fff', whFg: whOn ? '#fff' : C.ink,
+          toggleWh: async () => { if (whOn) return this.setState({ useLoc: false, roundTrip: false, startFrom: '' }); const g = await this.geocodeOne(st.depot);
+            if (!g) return this.setState({ locErr: 'Could not find the warehouse address on the map.' }); this.setState({ useLoc: true, myLoc: g, startFrom: 'warehouse', locErr: '' }); },
+          whChNav: 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + WH_CHARGER.lat + ',' + WH_CHARGER.lon };
+      })(),
       range: st.range, onRange: e => { const v = e.target.value.replace(/[^\d.]/g, ''); localStorage.setItem('scanchk.range', v); this.setState({ range: v }); },
-      locLabel: st.useLoc ? '✓ Start from my location' : 'Start from my location', locBg: st.useLoc ? C.ink : '#fff', locFg: st.useLoc ? '#fff' : C.ink,
-      showRound: st.useLoc, roundLabel: st.roundTrip ? '✓ Return to start' : 'Return to start', roundBg: st.roundTrip ? C.ink : '#fff', roundFg: st.roundTrip ? '#fff' : C.ink,
+      locLabel: st.useLoc && st.startFrom !== 'warehouse' ? '✓ Start from my location' : 'Start from my location', locBg: st.useLoc && st.startFrom !== 'warehouse' ? C.ink : '#fff', locFg: st.useLoc && st.startFrom !== 'warehouse' ? '#fff' : C.ink,
+      showRound: st.useLoc, roundLabel: (st.roundTrip ? '✓ ' : '') + (st.startFrom === 'warehouse' ? 'Return to warehouse' : 'Return to start'), roundBg: st.roundTrip ? C.ink : '#fff', roundFg: st.roundTrip ? '#fff' : C.ink,
       toggleRound: () => this.setState({ roundTrip: !st.roundTrip }),
       toggleLoc: () => {
-        if (st.useLoc) return this.setState({ useLoc: false, roundTrip: false });
+        if (st.useLoc && st.startFrom !== 'warehouse') return this.setState({ useLoc: false, roundTrip: false, startFrom: '' });
         if (!navigator.geolocation) return this.setState({ locErr: 'Location is not available on this device.' });
-        navigator.geolocation.getCurrentPosition(p => this.setState({ useLoc: true, locErr: '', myLoc: { lat: p.coords.latitude, lon: p.coords.longitude } }), () => this.setState({ locErr: 'Location permission was denied.' }), { enableHighAccuracy: true, timeout: 15000 });
+        navigator.geolocation.getCurrentPosition(p => this.setState({ useLoc: true, locErr: '', myLoc: { lat: p.coords.latitude, lon: p.coords.longitude }, startFrom: 'me' }), () => this.setState({ locErr: 'Location permission was denied.' }), { enableHighAccuracy: true, timeout: 15000 });
       },
       routeDrivers: isAdmin && (d.drivers || []).length ? [['', 'All drivers']].concat((d.drivers || []).filter(x => x.role !== 'admin' || Array.from(d.invoices.values()).some(o => String(o.driver || '').trim().toLowerCase() === x.name.toLowerCase())).map(x => [x.name.toLowerCase(), x.name])).map(([v, l]) => { const on = (st.routeDrv || '') === v; return { label: l, pick: () => this.setState({ routeDrv: v, routeSel: null }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null,
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
