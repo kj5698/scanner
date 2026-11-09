@@ -674,7 +674,7 @@ input{font:inherit}
               </sc-if>
             </div>
             <sc-for list="{{ chargerList }}" as="ch" hint-placeholder-count="0">
-              <div onClick="{{ ch.pan }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #eeebe4;cursor:pointer">
+              <div onClick="{{ ch.pan }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #eeebe4;cursor:pointer;background:{{ ch.bg }}">
                 <div style="flex:1;min-width:0">
                   <div style="display:flex;align-items:center;gap:6px;min-width:0">
                     <sc-if value="{{ ch.tag }}" hint-placeholder-val="{{ false }}">
@@ -950,6 +950,7 @@ function addComeback(inv, c) {
   if (parent && !parent.cbs.some(x => x.id === id)) parent.cbs.push({ id, date: o.date, ymd: o.ymd, items: cbItemsTxt(o.items), services: o.services.map(x => x.sid).join(', '), reason: o.reason });
   return id;
 }
+const RES_MIN = 10, RES_MAX = 30; // charge when about 10–30 mi of range are left
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
 const saveSort = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
@@ -1938,10 +1939,10 @@ class Component extends DCLogic {
     const rng = parseFloat(st.range), mi = ri && ri.miles;
     let warn = '', warnBg = '', warnFg = '';
     if (rng && mi) {
-      const pct = Math.round(mi / rng * 100);
-      if (mi > rng) { warn = 'Route is ' + mi.toFixed(0) + ' mi, more than your ' + rng + ' mi range. Plan a charge stop.'; warnBg = 'oklch(0.93 0.05 27)'; warnFg = 'oklch(0.4 0.14 27)'; }
-      else if (pct > 80) { warn = 'Uses about ' + pct + '% of your range. Heavy loads and cold weather reduce range, so plan a charge stop.'; warnBg = 'oklch(0.94 0.06 80)'; warnFg = 'oklch(0.4 0.1 70)'; }
-      else { warn = 'Within range: uses about ' + pct + '% of ' + rng + ' mi.'; warnBg = 'oklch(0.95 0.04 150)'; warnFg = 'oklch(0.36 0.09 150)'; }
+      const endLeft = rng - mi;
+      if (endLeft < RES_MIN) { warn = 'Route is ' + mi.toFixed(0) + ' mi with ' + rng + ' mi of range: ' + (endLeft < 0 ? 'you would run out about ' + Math.round(-endLeft) + ' mi before the end' : 'you would finish with only about ' + Math.round(endLeft) + ' mi left') + '. A charge stop is planned for when you are down to ' + RES_MIN + '–' + RES_MAX + ' mi.'; warnBg = 'oklch(0.93 0.05 27)'; warnFg = 'oklch(0.4 0.14 27)'; }
+      else if (endLeft < RES_MAX) { warn = 'You would finish with about ' + Math.round(endLeft) + ' mi left. Charge when you are down to ' + RES_MIN + '–' + RES_MAX + ' mi (see the charge plan below). Heavy loads and cold weather reduce range.'; warnBg = 'oklch(0.94 0.06 80)'; warnFg = 'oklch(0.4 0.1 70)'; }
+      else { warn = 'Within range: about ' + Math.round(endLeft) + ' mi left at the end of the route.'; warnBg = 'oklch(0.95 0.04 150)'; warnFg = 'oklch(0.36 0.09 150)'; }
     }
     const trip = {
       miles: mi != null ? mi.toFixed(1) + ' mi' : '—',
@@ -1952,7 +1953,8 @@ class Component extends DCLogic {
     const allCh = this.allChargers(), nSaved = allCh.filter(c => c.saved).length;
     const chargerList = allCh.map(c => ({
       name: c.name, nav: c.nav, tag: c.saved ? 'SAVED' : c.fast ? 'NACS' : 'NACS L2', tagBg: c.saved ? 'oklch(0.85 0.17 90)' : c.fast ? 'oklch(0.9 0.06 150)' : '#ebe8e1',
-      sub: c.type + ' · ' + (c.off < 0.1 ? 'on route' : c.off.toFixed(1) + ' mi off route') + ' · around mile ' + Math.round(c.at) + (c.stalls ? ' · ' + c.stalls + ' stalls' : ''),
+      sub: c.type + ' · ' + (c.off < 0.1 ? 'on route' : c.off.toFixed(1) + ' mi off route') + ' · around mile ' + Math.round(c.at) + (c.stalls ? ' · ' + c.stalls + ' stalls' : '') + (rng ? ' · ≈' + Math.round(rng - c.at - c.off) + ' mi left here' : ''),
+      bg: rng && (c.saved || c.fast) && rng - c.at - c.off >= RES_MIN && rng - c.at - c.off <= RES_MAX ? 'oklch(0.96 0.04 150)' : '#fff',
       pan: () => { if (this.map) this.map.setView([c.lat, c.lon], 15); }
     }));
     const savedTxt = d.saved && d.saved.length ? nSaved + ' of your ' + d.saved.length + ' saved chargers within 10 mi' : 'No CHARGERS tab found';
@@ -1963,10 +1965,15 @@ class Component extends DCLogic {
     const rTake = rl.slice(0, 9);
     let fullRouteUrl = rl.length > 1 ? 'https://www.google.com/maps/dir/Current+Location/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') : '';
     let fullRouteLabel = rl.length > 9 ? 'Navigate first 9 stops' : 'Navigate all ' + rl.length + ' stops', chargePlan = null;
-    if (rng && mi && mi > rng * 0.8 && ri && ri.legs) {
-      const usable = rng * 0.8, score = c => c.at - c.off * 2 + (c.saved ? 1 : 0);
-      const reach = allCh.filter(c => (c.saved || c.fast) && c.at + c.off <= usable);
-      const best = reach.length ? reach.reduce((b, c) => score(c) > score(b) ? c : b) : null;
+    const needCharge = !!(rng && mi && rng - mi < RES_MAX);
+    if (needCharge && ri && ri.legs) {
+      const leftAt = c => rng - (c.at + c.off);
+      const reach = allCh.filter(c => (c.saved || c.fast) && leftAt(c) >= RES_MIN);
+      const win = reach.filter(c => leftAt(c) <= RES_MAX);
+      const endOk = rng - mi >= RES_MIN;
+      const best = win.length ? win.reduce((b, c) => (c.off - (c.saved ? 0.5 : 0)) < (b.off - (b.saved ? 0.5 : 0)) || (c.off === b.off && c.at > b.at) ? c : b)
+        : !endOk && reach.length ? reach.reduce((b, c) => leftAt(c) < leftAt(b) ? c : b) : null;
+      const bestLeft = best ? Math.round(leftAt(best)) : 0, inWin = best && bestLeft <= RES_MAX;
       if (best) {
         const cumById = {}; let cm = 0;
         locIds.forEach((id, i) => { if (ri.fromLoc) cm += ri.legs[i] || 0; else if (i > 0) cm += ri.legs[i - 1] || 0; cumById[id] = cm; });
@@ -1976,12 +1983,15 @@ class Component extends DCLogic {
         fullRouteUrl = 'https://www.google.com/maps/dir/Current+Location/' + parts.join('/');
         fullRouteLabel = 'Navigate stops + charge stop';
         chargePlan = { ok: true, name: best.name, nav: best.nav, url: fullRouteUrl,
-          text: 'Charge stop added after stop ' + (before.length ? before[before.length - 1].num : 'start') + ', around mile ' + Math.round(best.at) + ', ' + best.off.toFixed(1) + ' mi off route (' + Math.round((best.at + best.off) / rng * 100) + '% of range used by then).',
-          bg: 'oklch(0.95 0.04 150)', fg: 'oklch(0.34 0.09 150)' };
+          text: 'Charge stop added after stop ' + (before.length ? before[before.length - 1].num : 'start') + ', around mile ' + Math.round(best.at) + (best.off >= 0.1 ? ', ' + best.off.toFixed(1) + ' mi off route' : ', on route') + '. You will have about ' + bestLeft + ' mi left when you get there' + (inWin ? '.' : ' (no fast NACS charger where you would be down to ' + RES_MIN + '–' + RES_MAX + ' mi, so this is the last good one before that).'),
+          bg: inWin ? 'oklch(0.95 0.04 150)' : 'oklch(0.94 0.06 80)', fg: inWin ? 'oklch(0.34 0.09 150)' : 'oklch(0.4 0.1 70)' };
+      } else if (endOk) {
+        const lastFast = allCh.filter(c => c.saved || c.fast).slice(-1)[0];
+        chargePlan = { ok: false, name: lastFast ? lastFast.name : '', nav: lastFast ? lastFast.nav : '', url: '', text: 'You will finish with about ' + Math.round(rng - mi) + ' mi left. No fast NACS charger sits on the route where you would be down to ' + RES_MIN + '–' + RES_MAX + ' mi, so charge after your last stop' + (lastFast ? '. Last fast charger on the route: ' + lastFast.name + ' near mile ' + Math.round(lastFast.at) + '.' : '.'), bg: 'oklch(0.94 0.06 80)', fg: 'oklch(0.4 0.1 70)' };
       } else if (allCh.length) {
-        chargePlan = { ok: false, name: allCh[0].name, nav: allCh[0].nav, url: '', text: 'No charger along the route is within safe range. Charge before you leave. Nearest on route: ' + allCh[0].name + ' at mile ' + Math.round(allCh[0].at) + '.', bg: 'oklch(0.93 0.05 27)', fg: 'oklch(0.4 0.14 27)' };
+        chargePlan = { ok: false, name: allCh[0].name, nav: allCh[0].nav, url: '', text: 'No fast NACS charger along the route can be reached with at least ' + RES_MIN + ' mi to spare. Charge before you leave. Nearest on route: ' + allCh[0].name + ' at mile ' + Math.round(allCh[0].at) + '.', bg: 'oklch(0.93 0.05 27)', fg: 'oklch(0.4 0.14 27)' };
       }
-    } else if (rng && mi && mi > rng * 0.8 && !allCh.length && chs && (chs.list || chs.error)) {
+    } else if (needCharge && !allCh.length && chs && (chs.list || chs.error)) {
       chargePlan = { ok: false, name: '', nav: '', url: '', text: 'Range is low and no chargers were found near the route. Charge before you leave.', bg: 'oklch(0.93 0.05 27)', fg: 'oklch(0.4 0.14 27)' };
     }
     const qy = st.qty;
