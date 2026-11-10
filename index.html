@@ -618,6 +618,9 @@ input{font:inherit}
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#55524a">{{ routeStatus }}</div>
+          <sc-if value="{{ doneCount }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ toggleDone }}" style="height:34px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;font:500 12px 'IBM Plex Sans';cursor:pointer">{{ doneLabel }}</button>
+          </sc-if>
           <sc-if value="{{ fullRouteUrl }}" hint-placeholder-val="{{ false }}">
             <a href="{{ fullRouteUrl }}" target="_blank" rel="noopener" style="height:40px;padding:0 14px;border-radius:8px;border:1px solid #1c1b18;background:#fff;color:#1c1b18;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center;white-space:nowrap">{{ fullRouteLabel }}</a>
           </sc-if>
@@ -1065,10 +1068,11 @@ class Component extends DCLogic {
     return s === 'both' ? (o.ymd === d.today || o.ymd === d.tomorrow) : o.ymd === d[s];
   }
 
-  routeList() {
+  routeList(withDone) {
     const d = this.state.data; if (!d) return [];
+    const keepDone = withDone || this.state.showDone;
     const rd = this.state.routeDrv && this.state.me && this.state.me.role === 'admin' ? this.state.routeDrv.trim().toLowerCase() : '';
-    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address && (!rd || (rd === '__un' ? !String(o.driver || '').trim() : String(o.driver || '').trim().toLowerCase() === rd)))
+    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address && (keepDone || this.status(o).st !== 'Complete') && (!rd || (rd === '__un' ? !String(o.driver || '').trim() : String(o.driver || '').trim().toLowerCase() === rd)))
       .sort((a, b) => (a.ymd || '').localeCompare(b.ymd || '') || ((a.stop !== '' ? +a.stop : 999) - (b.stop !== '' ? +b.stop : 999)) || a.id.localeCompare(b.id))
       .map((o, i) => ({ o, v: this.invView(o), num: o.stop || String(i + 1) }));
   }
@@ -1995,7 +1999,7 @@ class Component extends DCLogic {
       });
     const cnt = k => Array.from(d.invoices.values()).filter(o => this.inDay(o) && this.status(o).st === k).length;
     const dayName = { today: 'today', tomorrow: 'tomorrow', both: 'today or tomorrow' }[st.day];
-    const rl = this.routeList(), geo = st.geo;
+    const rl = this.routeList(), geo = st.geo, doneN = this.routeList(true).filter(s => s.v.st === 'Complete').length;
     const located = rl.filter(s => geo[s.o.address] && geo[s.o.address] !== 'x').length;
     const pendingGeo = rl.filter(s => !(s.o.address in geo)).length, missing = rl.length - located - pendingGeo;
     const routeStops = rl.map(s => {
@@ -2134,7 +2138,8 @@ class Component extends DCLogic {
       routeDrivers: isAdmin && (d.drivers || []).length ? [['', 'All drivers']].concat((d.drivers || []).filter(x => x.role !== 'admin' || Array.from(d.invoices.values()).some(o => String(o.driver || '').trim().toLowerCase() === x.name.toLowerCase())).map(x => [x.name.toLowerCase(), x.name])).map(([v, l]) => { const on = (st.routeDrv || '') === v; return { label: l, pick: () => this.setState({ routeDrv: v, routeSel: null }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null,
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
-      routeEmpty: !rl.length, routeEmptyText: 'No invoices with an address scheduled for ' + dayName + '.',
+      routeEmpty: !rl.length, routeEmptyText: doneN && !st.showDone ? 'All ' + doneN + ' stops for ' + dayName + ' are delivered.' : 'No invoices with an address scheduled for ' + dayName + '.',
+      doneCount: doneN, doneLabel: st.showDone ? 'Hide delivered (' + doneN + ')' : '✓ ' + doneN + ' delivered · show', toggleDone: () => this.setState({ showDone: !st.showDone, routeSel: null }),
       invEmptyText: all.length ? 'No invoices match.' : scope === 'past' ? 'No past invoices.' : scope === 'all' ? 'No invoices yet.' : 'No invoices scheduled for ' + dayName + '.',
       team: (() => {
         if (!isAdmin) return null;
