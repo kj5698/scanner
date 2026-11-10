@@ -396,6 +396,9 @@ input{font:inherit}
               </div>
             </sc-if>
             <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap">
+              <sc-if value="{{ lockedInv.isDeliver }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ lockedInv.backRoute }}" style="height:44px;padding:0 16px;border:none;border-radius:10px;background:oklch(0.5 0.14 255);color:#fff;font:600 14px 'IBM Plex Sans';cursor:pointer">← Back to route</button>
+              </sc-if>
               <button onClick="{{ resetSession }}" style="height:44px;padding:0 16px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:500 14px 'IBM Plex Sans';cursor:pointer">Next invoice</button>
               <sc-if value="{{ lockedInv.canCb }}" hint-placeholder-val="{{ false }}">
                 <button onClick="{{ lockedInv.newCb }}" style="height:44px;padding:0 16px;border:1px solid oklch(0.58 0.13 70);border-radius:10px;background:#fff;color:oklch(0.42 0.1 70);font:600 14px 'IBM Plex Sans';cursor:pointer">↩ Come back needed</button>
@@ -566,6 +569,12 @@ input{font:inherit}
 
     <sc-if value="{{ isRoute }}" hint-placeholder-val="{{ false }}">
       <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-if value="{{ routeMsg }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:12px 16px;border-radius:12px;background:oklch(0.52 0.13 150);color:#fff;display:flex;flex-direction:column;gap:2px">
+            <div style="font-weight:600;font-size:16px">{{ routeMsg.title }}</div>
+            <div style="font-size:13px;opacity:0.9">{{ routeMsg.sub }}</div>
+          </div>
+        </sc-if>
         <sc-if value="{{ routeDrivers }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <sc-for list="{{ routeDrivers }}" as="f" hint-placeholder-count="3">
@@ -1046,6 +1055,8 @@ class Component extends DCLogic {
     } catch (e) {}
     this.load();
     this.fetchWx();
+    this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
+    document.addEventListener('visibilitychange', this.onVis);
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
@@ -1055,8 +1066,8 @@ class Component extends DCLogic {
       }
     } catch (e) {}
   }
-  componentDidUpdate() { this.syncMap(); this.syncTeamMap(); this.renderGsi(); }
-  componentWillUnmount() { clearInterval(this.teamT); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
+  componentDidUpdate() { this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
+  componentWillUnmount() { clearInterval(this.teamT); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
 
   days() {
     const k = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1753,13 +1764,30 @@ class Component extends DCLogic {
     img.onerror = () => this.setProof({ error: 'Could not read that photo. Try again.' });
     img.src = url; e.target.value = '';
   };
+  backToRoute(id, sub) {
+    this.stopCam();
+    const next = this.routeList()[0];
+    clearTimeout(this.rmT);
+    this.setState({ tab: 'route', mode: 'deliver', locked: null, scans: [], qty: null, flash: null, routeSel: next ? next.o.id : null,
+      routeMsg: { title: '✓ Delivered ' + id, sub: sub + (next ? ' · Next: stop ' + next.num + ', ' + next.v.customer : ' · All stops delivered') } });
+    this.rmT = setTimeout(() => this.setState({ routeMsg: null }), 8000);
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  syncWake() {
+    const st = this.state, want = !st.authNeeded && (st.tab === 'route' || st.mode === 'deliver') && document.visibilityState === 'visible';
+    if (!('wakeLock' in navigator)) return;
+    if (want && !this.wake && !this.wakeBusy) {
+      this.wakeBusy = true;
+      navigator.wakeLock.request('screen').then(w => { this.wake = w; this.wakeBusy = false; w.addEventListener('release', () => { if (this.wake === w) this.wake = null; }); }).catch(() => { this.wakeBusy = false; });
+    } else if (!want && this.wake) { const w = this.wake; this.wake = null; w.release().catch(() => {}); }
+  }
   skipProof() {
     const L = this.state.locked, o = L && this.state.data.invoices.get(L); if (!o) return;
     const p = this.state.proof && this.state.proof.inv === L ? this.state.proof : null;
     if (p && p.saving) return;
     if (!(p && p.skipConfirm)) return this.setProof({ skipConfirm: true, error: '' });
     this.sendLog([{ upc: '', model: '', invoice: L, result: 'DELIVERY_COMPLETE' }]);
-    this.setState({ proof: null }, () => { this.tone('done'); this.setFlash('done', 'Delivery complete: ' + L, 'Completed without photo or signature'); });
+    this.setState({ proof: null }, () => { this.tone('done'); this.backToRoute(L, 'Completed without photo or signature'); });
   }
   amountOf(o) {
     if (o.comeback) return 0;
@@ -1796,7 +1824,7 @@ class Component extends DCLogic {
     this.setState(s => ({ proof: null, data: { ...s.data,
       log: s.data.log.concat({ invoice: L, upc: '', model: '', result: 'DELIVERY_COMPLETE' }),
       deliveries: (s.data.deliveries || []).concat({ invoice: L, receiver: (p.receiver || '').trim(), photo: res ? res.photo : '', sig: res ? res.sig : '' }) } }),
-      () => { this.tone('done'); this.setFlash('done', 'Delivery complete: ' + L, 'Photo and signature saved'); });
+      () => { this.tone('done'); this.backToRoute(L, 'Photo and signature saved'); });
   }
 
   lock(id) {
@@ -1953,7 +1981,7 @@ class Component extends DCLogic {
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, routeMsg: null, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', showRound: false, fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -1961,7 +1989,7 @@ class Component extends DCLogic {
     const Ls = L && this.status(L), dl = L && (d.deliveries || []).filter(x => x.invoice === L.id).pop();
     const lockedInv = L ? { ...this.invView(L), rows: this.rowsFor(L),
       needsConfirm: st.mode !== 'deliver' && Ls.st === 'Ready', verified: st.mode !== 'deliver' && verified && Ls.st !== 'Complete',
-      needsProof: st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', delivered: Ls.st === 'Complete',
+      needsProof: st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', isDeliver: st.mode === 'deliver', backRoute: () => { this.stopCam(); this.setState({ tab: 'route', routeSel: L.id }); try { window.scrollTo(0, 0); } catch (e) {} }, delivered: Ls.st === 'Complete',
       deliveredText: dl ? 'Delivered' + (dl.receiver ? ', received by ' + dl.receiver : '') + '. Photo and signature saved.' : 'Delivered without photo or signature.',
       photoLink: dl ? dl.photo : '', sigLink: dl ? dl.sig : '', hasPhotoLink: !!(dl && dl.photo), hasSigLink: !!(dl && dl.sig) } : null;
     const pf = L && st.proof && st.proof.inv === L.id ? st.proof : { photo: '', receiver: '', signed: false };
@@ -2136,6 +2164,7 @@ class Component extends DCLogic {
         navigator.geolocation.getCurrentPosition(p => this.setState({ useLoc: true, locErr: '', myLoc: { lat: p.coords.latitude, lon: p.coords.longitude }, startFrom: 'me' }), () => this.setState({ locErr: 'Location permission was denied.' }), { enableHighAccuracy: true, timeout: 15000 });
       },
       routeDrivers: isAdmin && (d.drivers || []).length ? [['', 'All drivers']].concat((d.drivers || []).filter(x => x.role !== 'admin' || Array.from(d.invoices.values()).some(o => String(o.driver || '').trim().toLowerCase() === x.name.toLowerCase())).map(x => [x.name.toLowerCase(), x.name])).map(([v, l]) => { const on = (st.routeDrv || '') === v; return { label: l, pick: () => this.setState({ routeDrv: v, routeSel: null }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null,
+      routeMsg: st.routeMsg || null,
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
       routeEmpty: !rl.length, routeEmptyText: doneN && !st.showDone ? 'All ' + doneN + ' stops for ' + dayName + ' are delivered.' : 'No invoices with an address scheduled for ' + dayName + '.',
