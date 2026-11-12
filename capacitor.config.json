@@ -1,0 +1,11 @@
+{
+  "appId": "com.kj5698.scancheck",
+  "appName": "Scan-Check",
+  "webDir": "www",
+  "server": {
+    "url": "https://kj5698.github.io/scanner/",
+    "androidScheme": "https",
+    "allowNavigation": ["kj5698.github.io"]
+  },
+  "android": { "allowMixedContent": false }
+}

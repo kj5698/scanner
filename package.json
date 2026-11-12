@@ -1,0 +1,11 @@
+{
+  "name": "scan-check-android",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android (APK) wrapper for Invoice Scan-Check",
+  "dependencies": {
+    "@capacitor/android": "6.2.2",
+    "@capacitor/cli": "6.2.2",
+    "@capacitor/core": "6.2.2"
+  }
+}

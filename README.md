@@ -18,3 +18,12 @@ The app will be at `https://<your-username>.github.io/<repo-name>/`.
 ## Privacy
 Don't commit your Apps Script `/exec` link. Enter it in the app under Settings instead,
 or share the driver link from the app (Settings → Copy).
+
+## Android app (APK)
+GitHub builds an installable APK with the **Build Android APK** workflow (Actions tab) and publishes it at:
+https://github.com/kj5698/scanner/releases/download/apk-latest/scan-check.apk
+
+- Open that link on the Android phone, download, then open the file and allow "Install unknown apps".
+- The app loads the live version from GitHub Pages, so app updates arrive without reinstalling.
+- Camera, location and photo permissions are requested the first time they are used.
+- `android/debug.keystore` is a fixed signing key so a rebuilt APK installs over the old one.

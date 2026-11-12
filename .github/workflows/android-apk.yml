@@ -1,0 +1,76 @@
+name: Build Android APK
+
+# Builds the Scan-Check Android app and publishes it as the "apk-latest" release.
+# The app itself loads from GitHub Pages, so normal app updates do NOT need a new APK.
+# Run it again (Actions tab → Build Android APK → Run workflow) only if the wrapper changes.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4.5.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Capacitor
+        run: npm ci
+
+      - name: Copy web files and sync Android project
+        run: |
+          mkdir -p www
+          cp index.html support.js manifest.json sw.js setup-guide.html icon-*.png www/
+          npx cap sync android
+
+      - name: Use the fixed signing key (so updates install over the old app)
+        run: |
+          mkdir -p ~/.android
+          cp android/debug.keystore ~/.android/debug.keystore
+
+      - name: Set version number
+        run: |
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../scan-check.apk
+
+      - uses: actions/upload-artifact@v4.4.3
+        with:
+          name: scan-check-apk
+          path: scan-check.apk
+
+      - name: Publish to the apk-latest release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          tag_name: apk-latest
+          name: Scan-Check Android app
+          make_latest: true
+          files: scan-check.apk
+          body: |
+            Download **scan-check.apk** below and open it on the Android phone (allow "Install unknown apps" when asked).
+            The app loads the latest Scan-Check from GitHub Pages, so it updates by itself; you only reinstall if this release changes.
+            Build ${{ github.run_number }} from commit ${{ github.sha }}.
