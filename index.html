@@ -1031,7 +1031,7 @@ const LOADS = { light: ['Light', 1.05], normal: ['Normal', 1], heavy: ['Heavy', 
 const tempFactor = f => f == null ? 1 : f >= 85 ? 0.92 : f >= 65 ? 1 : f >= 50 ? 0.95 : f >= 32 ? 0.85 : f >= 20 ? 0.75 : 0.65;
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-const NAV_APPS = { google: 'Google Maps', waze: 'Waze', apple: 'Apple Maps', other: 'Other app' };
+const NAV_APPS = { google: 'Google Maps', waze: 'Waze', apple: 'Apple Maps', other: 'OsmAnd / other app' };
 const UA = typeof navigator !== 'undefined' ? navigator.userAgent : '';
 const IS_IOS = /iPhone|iPad|iPod/i.test(UA), IS_ANDROID = /Android/i.test(UA);
 function parseNav(href) {
@@ -1047,7 +1047,10 @@ function navUrl(app, n) {
   const d = n.dest, ll = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(d.trim()), e = encodeURIComponent(d), c = d.replace(/\s/g, '');
   if (app === 'waze') return ll ? 'https://waze.com/ul?ll=' + c + '&navigate=yes' : 'https://waze.com/ul?q=' + e + '&navigate=yes';
   if (app === 'apple') return 'https://maps.apple.com/?daddr=' + e + '&dirflg=d';
-  if (app === 'other') return ll ? 'geo:' + c + '?q=' + c : 'geo:0,0?q=' + e;
+  if (app === 'other') {
+    const p = ll ? c : n.ll ? n.ll.lat.toFixed(6) + ',' + n.ll.lon.toFixed(6) : '';
+    return p ? 'geo:' + p + '?q=' + p + '(' + encodeURIComponent((n.label || d).replace(/[()]/g, ' ').slice(0, 60)) + ')' : 'geo:0,0?q=' + e;
+  }
   return n.gUrl;
 }
 function openNav(url) {
@@ -1089,7 +1092,10 @@ class Component extends DCLogic {
   };
 
   navigate(href) {
-    const n = parseNav(href), app = this.state.navApp;
+    const n = parseNav(href), app = this.state.navApp, g = this.state.geo[n.dest];
+    if (g && g !== 'x') n.ll = g;
+    const inv = this.state.data && Array.from(this.state.data.invoices.values()).find(o => o.address === n.dest);
+    if (inv) n.label = (inv.stop ? 'Stop ' + inv.stop + ' ' : '') + (inv.customer || inv.id);
     if (app && (app !== 'apple' || IS_IOS) && (app !== 'other' || IS_ANDROID)) return openNav(navUrl(app, n));
     this.setState({ navPick: n, navRemember: false });
   }
@@ -2001,9 +2007,9 @@ class Component extends DCLogic {
       navPick: st.navPick ? (() => {
         const n = st.navPick, next = n.multi ? 'Goes to the next stop only: ' + n.dest : 'Turn-by-turn directions';
         const apps = [['google', n.multi ? 'Takes the whole route (' + n.stops.length + ' points)' : 'Turn-by-turn directions'], ['waze', next]]
-          .concat(IS_IOS ? [['apple', next]] : []).concat(IS_ANDROID || !IS_IOS ? [['other', (IS_ANDROID ? 'Pick from the navigation apps on this phone' : 'Opens your device\'s default maps app') + (n.multi ? ' · next stop only' : '')]] : []);
+          .concat(IS_IOS ? [['apple', next]] : []).concat(IS_ANDROID || !IS_IOS ? [['other', (IS_ANDROID ? 'Opens the exact spot in OsmAnd (pick it once and tap "Always"), then tap Navigate there' : 'Opens your device\'s default maps app') + (n.multi ? ' · next stop only' : '')]] : []);
         return { title: n.multi ? 'Navigate the route with…' : 'Navigate with…', dest: n.multi ? 'Next stop: ' + n.dest + ' · then ' + (n.stops.length - 1) + ' more' : n.dest,
-          opts: apps.map(([k, sub]) => ({ label: k === 'other' && IS_ANDROID ? 'Other app…' : NAV_APPS[k], sub, pick: () => {
+          opts: apps.map(([k, sub]) => ({ label: k === 'other' ? (IS_ANDROID ? 'OsmAnd / other app…' : 'Other maps app') : NAV_APPS[k], sub, pick: () => {
             if (st.navRemember) lsSet('scanchk.navApp', k);
             this.setState({ navPick: null, navApp: st.navRemember ? k : st.navApp }); openNav(navUrl(k, n)); } })),
           remBg: st.navRemember ? '#1c1b18' : '#fff', remMark: st.navRemember ? '✓' : '',
