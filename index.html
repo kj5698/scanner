@@ -52,8 +52,30 @@ input{font:inherit}
   </nav>
   </div>
 
+  <sc-if value="{{ navPick }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ navPick.close }}" style="position:fixed;inset:0;z-index:2000;background:rgba(28,27,24,0.45);display:flex;align-items:flex-end;justify-content:center">
+      <div onClick="{{ navPick.stop }}" style="width:100%;max-width:520px;background:#fff;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 24px rgba(0,0,0,0.18)">
+        <div style="font-weight:600;font-size:17px">{{ navPick.title }}</div>
+        <div style="font-size:13px;color:#55524a;line-height:1.4;word-break:break-word">{{ navPick.dest }}</div>
+        <sc-for list="{{ navPick.opts }}" as="o" hint-placeholder-count="3">
+          <button onClick="{{ o.pick }}" style="text-align:left;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #d6d2c8;border-radius:12px;background:#fff;color:#1c1b18;font-family:'IBM Plex Sans';cursor:pointer">
+            <span style="font:600 16px 'IBM Plex Sans'">{{ o.label }}</span>
+            <span style="font-size:12px;color:#6b675e">{{ o.sub }}</span>
+          </button>
+        </sc-for>
+        <button onClick="{{ navPick.toggleRemember }}" style="align-self:flex-start;display:flex;align-items:center;gap:8px;border:none;background:none;padding:6px 0;font:500 14px 'IBM Plex Sans';color:#1c1b18;cursor:pointer"><span style="width:20px;height:20px;border-radius:5px;border:1.5px solid #1c1b18;display:inline-flex;align-items:center;justify-content:center;background:{{ navPick.remBg }};color:#fff;font-size:13px">{{ navPick.remMark }}</span>Always use this app (change in Settings)</button>
+        <button onClick="{{ navPick.close }}" style="height:44px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 15px 'IBM Plex Sans';cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  </sc-if>
   <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
     <div style="margin:12px 16px 0;padding:16px;background:#fff;border:1px solid #e2dfd7;border-radius:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
+        <div style="flex:1;min-width:0;font-size:13px;color:#33312b;line-height:1.4"><b>Navigation app:</b> {{ navAppText }}</div>
+        <sc-if value="{{ navAppSet }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ resetNavApp }}" style="flex:none;height:36px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">Ask every time</button>
+        </sc-if>
+      </div>
       <div style="font-weight:600;font-size:14px">Google Sheets connection</div>
       <div style="font-size:13px;color:#55524a;line-height:1.45;text-wrap:pretty">Paste the Web app URL from your Apps Script deployment (ends in <span style="font-family:'IBM Plex Mono',monospace">/exec</span>). <a href="setup-guide.html" style="font-weight:600">Step-by-step setup guide</a></div>
       <input value="{{ urlDraft }}" onChange="{{ onUrlDraft }}" placeholder="https://script.google.com/macros/s/…/exec" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;background:#fbfaf7;min-width:0">
@@ -1009,6 +1031,29 @@ const LOADS = { light: ['Light', 1.05], normal: ['Normal', 1], heavy: ['Heavy', 
 const tempFactor = f => f == null ? 1 : f >= 85 ? 0.92 : f >= 65 ? 1 : f >= 50 ? 0.95 : f >= 32 ? 0.85 : f >= 20 ? 0.75 : 0.65;
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const NAV_APPS = { google: 'Google Maps', waze: 'Waze', apple: 'Apple Maps', other: 'Other app' };
+const UA = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+const IS_IOS = /iPhone|iPad|iPod/i.test(UA), IS_ANDROID = /Android/i.test(UA);
+function parseNav(href) {
+  try {
+    const u = new URL(href);
+    if (u.searchParams.get('api') === '1') { const dest = u.searchParams.get('destination') || ''; return { gUrl: href, dest, stops: [dest], multi: false }; }
+    const parts = u.pathname.split('/maps/dir/')[1].split('/').filter(Boolean).map(x => decodeURIComponent(x.replace(/\+/g, ' ')));
+    const stops = parts.slice(1);
+    return { gUrl: href, dest: stops[0] || parts[0] || '', stops, multi: stops.length > 1 };
+  } catch (e) { return { gUrl: href, dest: '', stops: [], multi: false }; }
+}
+function navUrl(app, n) {
+  const d = n.dest, ll = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(d.trim()), e = encodeURIComponent(d), c = d.replace(/\s/g, '');
+  if (app === 'waze') return ll ? 'https://waze.com/ul?ll=' + c + '&navigate=yes' : 'https://waze.com/ul?q=' + e + '&navigate=yes';
+  if (app === 'apple') return 'https://maps.apple.com/?daddr=' + e + '&dirflg=d';
+  if (app === 'other') return ll ? 'geo:' + c + '?q=' + c : 'geo:0,0?q=' + e;
+  return n.gUrl;
+}
+function openNav(url) {
+  if (window.Capacitor || /^geo:/i.test(url)) { location.href = url; return; }
+  const w = window.open(url, '_blank', 'noopener'); if (!w) location.href = url;
+}
 const RES_MIN = 10, RES_MAX = 30; // charge when about 10–30 mi of range are left
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
@@ -1039,11 +1084,23 @@ class Component extends DCLogic {
     authNeeded: false, pinNames: [], pinName: localStorage.getItem('scanchk.pinname') || '', pin: '', loginErr: '', loginBusy: false, linkCopied: false,
     routeInfo: null, chargers: null, myLoc: null, startMode: 'auto', locErr: '',
     range: localStorage.getItem('scanchk.range') || '',
-    battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null,
+    navApp: lsGet('scanchk.navApp', ''), navPick: null, navRemember: false, battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null,
     geo: (() => { try { return JSON.parse(localStorage.getItem('scanchk.geo') || '{}'); } catch (e) { return {}; } })()
   };
 
+  navigate(href) {
+    const n = parseNav(href), app = this.state.navApp;
+    if (app && (app !== 'apple' || IS_IOS) && (app !== 'other' || IS_ANDROID)) return openNav(navUrl(app, n));
+    this.setState({ navPick: n, navRemember: false });
+  }
   componentDidMount() {
+    this.onNavClick = e => {
+      const a = e.target && e.target.closest ? e.target.closest('a[href*="google.com/maps/dir"]') : null;
+      if (!a) return;
+      e.preventDefault(); e.stopPropagation();
+      this.navigate(a.href);
+    };
+    document.addEventListener('click', this.onNavClick, true);
     try {
       const qs = new URLSearchParams(location.search), dep = qs.get('depot');
       if (dep) { lsSet('scanchk.depot', dep); this.state.depot = dep; this.state.depotDraft = dep; }
@@ -1068,7 +1125,7 @@ class Component extends DCLogic {
     } catch (e) {}
   }
   componentDidUpdate() { this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
-  componentWillUnmount() { clearInterval(this.teamT); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
+  componentWillUnmount() { clearInterval(this.teamT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
 
   days() {
     const k = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1939,6 +1996,20 @@ class Component extends DCLogic {
       onPinKey: e => { if (e.key === 'Enter') this.doLogin(); },
       submitPin: () => this.doLogin(), pinBtn: st.loginBusy ? 'Signing in…' : 'Sign in',
       signOut: () => this.signOut(),
+      navAppText: st.navApp ? NAV_APPS[st.navApp] + ' (always)' : 'Ask every time',
+      navAppSet: !!st.navApp, resetNavApp: () => { lsSet('scanchk.navApp', ''); this.setState({ navApp: '' }); },
+      navPick: st.navPick ? (() => {
+        const n = st.navPick, next = n.multi ? 'Goes to the next stop only: ' + n.dest : 'Turn-by-turn directions';
+        const apps = [['google', n.multi ? 'Takes the whole route (' + n.stops.length + ' points)' : 'Turn-by-turn directions'], ['waze', next]]
+          .concat(IS_IOS ? [['apple', next]] : []).concat(IS_ANDROID || !IS_IOS ? [['other', (IS_ANDROID ? 'Pick from the navigation apps on this phone' : 'Opens your device\'s default maps app') + (n.multi ? ' · next stop only' : '')]] : []);
+        return { title: n.multi ? 'Navigate the route with…' : 'Navigate with…', dest: n.multi ? 'Next stop: ' + n.dest + ' · then ' + (n.stops.length - 1) + ' more' : n.dest,
+          opts: apps.map(([k, sub]) => ({ label: k === 'other' && IS_ANDROID ? 'Other app…' : NAV_APPS[k], sub, pick: () => {
+            if (st.navRemember) lsSet('scanchk.navApp', k);
+            this.setState({ navPick: null, navApp: st.navRemember ? k : st.navApp }); openNav(navUrl(k, n)); } })),
+          remBg: st.navRemember ? '#1c1b18' : '#fff', remMark: st.navRemember ? '✓' : '',
+          toggleRemember: () => this.setState({ navRemember: !st.navRemember }),
+          close: () => this.setState({ navPick: null }), stop: e => e.stopPropagation() };
+      })() : null,
       showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); } catch (e) { return ''; } })(),
       copyLabel: st.linkCopied ? 'Copied ✓' : 'Copy',
       copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
