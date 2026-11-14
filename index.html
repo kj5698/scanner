@@ -70,6 +70,15 @@ input{font:inherit}
   </sc-if>
   <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
     <div style="margin:12px 16px 0;padding:16px;background:#fff;border:1px solid #e2dfd7;border-radius:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
+        <div style="font-weight:600;font-size:14px">Google Maps (optional)</div>
+        <div style="font-size:12px;color:#55524a;line-height:1.45">Paste a Google Maps API key to use Google's map and Google's address search, which finds far more addresses. Without a key the app uses the free OpenStreetMap map.</div>
+        <div style="display:flex;gap:8px">
+          <input value="{{ gkeyDraft }}" onChange="{{ onGkey }}" placeholder="AIza…" autoCapitalize="off" spellCheck="false" style="flex:1;min-width:0;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#1c1b18">
+          <button onClick="{{ saveGkey }}" style="flex:none;height:40px;padding:0 14px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ gkeyBtn }}</button>
+        </div>
+        <div style="font-size:12px;color:{{ gmColor }};font-weight:500">{{ gmStatus }}</div>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
         <div style="flex:1;min-width:0;font-size:13px;color:#33312b;line-height:1.4"><b>Navigation app:</b> {{ navAppText }}</div>
         <sc-if value="{{ navAppSet }}" hint-placeholder-val="{{ false }}">
@@ -1057,6 +1066,37 @@ function openNav(url) {
   if (window.Capacitor || /^geo:/i.test(url)) { location.href = url; return; }
   const w = window.open(url, '_blank', 'noopener'); if (!w) location.href = url;
 }
+const MUTANT_URL = 'https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/dist/Leaflet.GoogleMutant.js';
+const OSM_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function simplerAddrs(a) {
+  const out = [], noUnit = a.replace(/\b(apt|apartment|unit|suite|ste|fl|floor|rm|room|bldg|building|dept)\.?\s*#?\s*[\w-]+/ig, '').replace(/#\s*[\w-]+/g, '').replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ').trim();
+  if (noUnit && noUnit !== a) out.push(noUnit);
+  const zips = a.match(/\b\d{5}\b/g), street = noUnit.split(',')[0].trim();
+  if (zips && street && street !== noUnit) out.push(street + ', ' + zips[zips.length - 1]);
+  return out;
+}
+async function nominatim(q) {
+  const j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=' + encodeURIComponent(q))).json();
+  return j && j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : null;
+}
+// Google first (if a key is set), then OpenStreetMap with simpler versions of the address. Returns { res, waitMs } (res null = not found, undefined = network error).
+async function geocodeAddr(a) {
+  const g = window.google && window.google.maps;
+  if (g && g.Geocoder && window.__gmOk) {
+    try {
+      const r = await new g.Geocoder().geocode({ address: a, componentRestrictions: { country: 'US' } });
+      const loc = r && r.results && r.results[0] && r.results[0].geometry.location;
+      if (loc) return { res: { lat: loc.lat(), lon: loc.lng(), src: 'g', t: Date.now() }, waitMs: 60 };
+    } catch (e) { if (!/ZERO_RESULTS/.test(String(e && (e.code || e.message)))) { /* fall through to OpenStreetMap */ } }
+  }
+  try {
+    let res = await nominatim(a);
+    for (const alt of res ? [] : simplerAddrs(a)) { await sleep(1100); res = await nominatim(alt); if (res) break; }
+    return { res, waitMs: 1100 };
+  } catch (e) { return { res: undefined, waitMs: 1500 }; }
+}
+const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
 const RES_MIN = 10, RES_MAX = 30; // charge when about 10–30 mi of range are left
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
@@ -1088,7 +1128,8 @@ class Component extends DCLogic {
     routeInfo: null, chargers: null, myLoc: null, startMode: 'auto', locErr: '',
     range: localStorage.getItem('scanchk.range') || '',
     navApp: lsGet('scanchk.navApp', ''), navPick: null, navRemember: false, battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null,
-    geo: (() => { try { return JSON.parse(localStorage.getItem('scanchk.geo') || '{}'); } catch (e) { return {}; } })()
+    geo: (() => { try { const g = JSON.parse(localStorage.getItem('scanchk.geo') || '{}'), now = Date.now(); Object.keys(g).forEach(k => { if (!g[k] || g[k] === 'x' || (g[k].src === 'g' && now - (g[k].t || 0) > 29 * 864e5)) delete g[k]; }); return g; } catch (e) { return {}; } })(),
+    gkey: lsGet('scanchk.gkey', ''), gkeyDraft: lsGet('scanchk.gkey', ''), gm: false, gmErr: ''
   };
 
   navigate(href) {
@@ -1108,7 +1149,8 @@ class Component extends DCLogic {
     };
     document.addEventListener('click', this.onNavClick, true);
     try {
-      const qs = new URLSearchParams(location.search), dep = qs.get('depot');
+      const qs = new URLSearchParams(location.search), dep = qs.get('depot'), gk = qs.get('gkey');
+      if (gk) { lsSet('scanchk.gkey', gk); this.state.gkey = gk; this.state.gkeyDraft = gk; }
       if (dep) { lsSet('scanchk.depot', dep); this.state.depot = dep; this.state.depotDraft = dep; }
       const api = qs.get('api');
       if (api && /^https:\/\/script\.google/.test(api)) {
@@ -1119,6 +1161,7 @@ class Component extends DCLogic {
     } catch (e) {}
     this.load();
     this.fetchWx();
+    if (this.state.gkey) this.loadGoogle(this.state.gkey);
     this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading) this.load(); }, 60000);
@@ -1152,6 +1195,29 @@ class Component extends DCLogic {
       .map((o, i) => ({ o, v: this.invView(o), num: o.stop || String(i + 1) }));
   }
 
+  setBase(map) {
+    const L = window.L, google = this.state.gm && L.gridLayer && L.gridLayer.googleMutant, want = google ? 'google' : 'osm';
+    if (!map || map._scBaseKind === want) return;
+    if (map._scBase) map.removeLayer(map._scBase);
+    map._scBase = google ? L.gridLayer.googleMutant({ type: 'roadmap', maxZoom: 20 }) : L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: '© OpenStreetMap' });
+    map._scBase.addTo(map); map._scBaseKind = want;
+    if (map._scBase.bringToBack) map._scBase.bringToBack();
+  }
+  loadGoogle(key) {
+    if (!key || this.gmLoading === key) return;
+    this.gmLoading = key;
+    window.gm_authFailure = () => { window.__gmOk = false; this.setState({ gm: false, gmErr: 'Google refused this key. Check that Maps JavaScript API and Geocoding API are enabled, billing is on, and the key allows this website.' }); };
+    const addScript = (src, id) => new Promise((ok, bad) => { const old = document.getElementById(id); if (old) old.remove(); const sc = document.createElement('script'); sc.id = id; sc.src = src; sc.async = true; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc); });
+    window.__scanchkGm = () => {
+      window.__gmOk = true;
+      addScript(MUTANT_URL, 'gm-mutant').then(() => {
+        const geo = { ...this.state.geo }; Object.keys(geo).forEach(k => { if (geo[k] === 'x') delete geo[k]; });
+        this.setState({ gm: true, gmErr: '', geo });
+      }, () => this.setState({ gmErr: 'Could not load the Google map layer. Addresses still use Google.' }));
+    };
+    addScript('https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&v=weekly&loading=async&callback=__scanchkGm', 'gm-js')
+      .catch(() => this.setState({ gmErr: 'Could not reach Google Maps. Check your connection.' }));
+  }
   syncMap() {
     if (this.state.tab !== 'route' || !window.L || !this.state.data) return;
     const el = document.getElementById('routemap'); if (!el) return;
@@ -1159,9 +1225,9 @@ class Component extends DCLogic {
     if (this.map && this.map.getContainer() !== el) { this.map.remove(); this.map = null; }
     if (!this.map) {
       this.map = L.map(el).setView([39.5, -98.35], 4);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
       this.layer = L.layerGroup().addTo(this.map); this.sig = ''; this.fitted = ''; this.panned = '';
     }
+    this.setBase(this.map);
     const stops = this.routeList(), geo = this.state.geo, selId = this.state.routeSel;
     const ri = this.state.routeInfo, chs = this.state.chargers, E = this.routeEnds(), ml = E.mode === 'me' ? E.start : null, wh = E.end;
     if (this.state.depot && !(this.state.depot in geo) && !this.depotBusy) { this.depotBusy = true; this.geocodeOne(this.state.depot).then(() => { this.depotBusy = false; }); }
@@ -1342,14 +1408,12 @@ class Component extends DCLogic {
     }
     if (!a) return;
     this.geoBusy = true;
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(a))
-      .then(r => r.json()).then(j => (j && j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : 'x'), () => null)
-      .then(res => {
-        const geo = { ...this.state.geo, [a]: res || 'x' };
-        if (res) { const keep = { ...geo }; Object.keys(keep).forEach(k => { if (keep[k] === 'x' && k !== a) delete keep[k]; }); try { localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} }
-        this.setState({ geo });
-        setTimeout(() => { this.geoBusy = false; this.syncMap(); }, 1100);
-      });
+    geocodeAddr(a).then(({ res, waitMs }) => {
+      const geo = { ...this.state.geo, [a]: res || 'x' };
+      if (res) saveGeo(geo);
+      this.setState({ geo });
+      setTimeout(() => { this.geoBusy = false; this.syncMap(); }, waitMs);
+    });
   }
 
   parse(raw) {
@@ -1555,12 +1619,11 @@ class Component extends DCLogic {
     if (a in this.state.geo) return this.state.geo[a] === 'x' ? null : this.state.geo[a];
     while (this.geoBusy) await new Promise(r => setTimeout(r, 300));
     this.geoBusy = true;
-    let res = null;
-    try { const j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(a))).json(); res = j && j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : null; } catch (e) {}
+    const { res, waitMs } = await geocodeAddr(a);
     const geo = { ...this.state.geo, [a]: res || 'x' };
-    try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {}
+    if (res) saveGeo(geo);
     this.setState({ geo });
-    await new Promise(r => setTimeout(r, 1100));
+    await sleep(waitMs);
     this.geoBusy = false;
     try { this.syncMap(); } catch (e) {}
     return res;
@@ -1623,9 +1686,9 @@ class Component extends DCLogic {
     if (this.tmap && this.tmap.getContainer() !== el) { this.tmap.remove(); this.tmap = null; }
     if (!this.tmap) {
       this.tmap = L.map(el).setView([39.5, -98.35], 4);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.tmap);
       this.tlayer = L.layerGroup().addTo(this.tmap); this.tsig = '';
     }
+    this.setBase(this.tmap);
     const locs = this.state.data.locations || [], sig = JSON.stringify(locs);
     if (sig === this.tsig) return; this.tsig = sig;
     this.tlayer.clearLayers(); const pts = [];
@@ -2002,6 +2065,11 @@ class Component extends DCLogic {
       onPinKey: e => { if (e.key === 'Enter') this.doLogin(); },
       submitPin: () => this.doLogin(), pinBtn: st.loginBusy ? 'Signing in…' : 'Sign in',
       signOut: () => this.signOut(),
+      gkeyDraft: st.gkeyDraft, onGkey: e => this.setState({ gkeyDraft: e.target.value.trim() }),
+      gkeyBtn: st.gkeyDraft === st.gkey && st.gkey ? 'Saved ✓' : 'Save',
+      saveGkey: () => { const k = st.gkeyDraft.trim(); lsSet('scanchk.gkey', k); if (!k) { try { location.reload(); } catch (e) {} return; } this.setState({ gkey: k, gmErr: '' }, () => { this.gmLoading = ''; this.loadGoogle(k); }); },
+      gmStatus: st.gmErr ? st.gmErr : st.gm ? '✓ Using Google Maps for the map and address search' : st.gkey ? 'Connecting to Google Maps…' : 'Using OpenStreetMap (free)',
+      gmColor: st.gmErr ? C.red : st.gm ? C.green : '#6b675e',
       navAppText: st.navApp ? NAV_APPS[st.navApp] + ' (always)' : 'Ask every time',
       navAppSet: !!st.navApp, resetNavApp: () => { lsSet('scanchk.navApp', ''); this.setState({ navApp: '' }); },
       navPick: st.navPick ? (() => {
@@ -2016,9 +2084,9 @@ class Component extends DCLogic {
           toggleRemember: () => this.setState({ navRemember: !st.navRemember }),
           close: () => this.setState({ navPick: null }), stop: e => e.stopPropagation() };
       })() : null,
-      showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); } catch (e) { return ''; } })(),
+      showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); } catch (e) { return ''; } })(),
       copyLabel: st.linkCopied ? 'Copied ✓' : 'Copy',
-      copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
+      copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
       days: (() => { const dd = this.days(); return [['today', 'Today ' + dd.tl], ['tomorrow', 'Tomorrow ' + dd.ml], ['both', 'Both']].map(([k, l]) => { const on = st.day === k; return { label: l, pick: () => { localStorage.setItem('scanchk.day', k); this.setState({ day: k, routeSel: null, locked: null, scans: [], flash: null }); }, bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }); })(),
       demo: st.demo, showSettings: st.settings, urlDraft: st.urlDraft, errText: st.err,
       sourceLabel: st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
