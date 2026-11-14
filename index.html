@@ -35,7 +35,12 @@ input{font:inherit}
   <header style="padding:14px 16px 6px;display:flex;align-items:center;gap:12px">
     <div style="flex:1;min-width:0">
       <div style="font-weight:600;font-size:17px;letter-spacing:-0.01em">Invoice Scan-Check</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e;margin-top:2px">{{ sourceLabel }}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b675e">{{ sourceLabel }}</div>
+        <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ signOutAsk }}" style="border:none;background:none;padding:0;font:600 11px 'IBM Plex Sans';color:{{ signOutColor }};text-decoration:underline;cursor:pointer">{{ signOutLabel }}</button>
+        </sc-if>
+      </div>
     </div>
     <button onClick="{{ reload }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Refresh</button>
     <button onClick="{{ toggleSettings }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Settings</button>
@@ -1226,7 +1231,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.1.0', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.1.1', APP_BUILD = '2026-11-13';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = {
@@ -2545,6 +2550,8 @@ class Component extends DCLogic {
       onPinKey: e => { if (e.key === 'Enter') this.doLogin(); },
       submitPin: () => this.doLogin(), pinBtn: st.loginBusy ? 'Signing in…' : 'Sign in',
       signOut: () => this.signOut(),
+      signOutLabel: st.confirmOut ? 'Tap again to sign out' : 'Sign out', signOutColor: st.confirmOut ? C.red : '#55524a',
+      signOutAsk: () => { if (st.confirmOut) { this.setState({ confirmOut: false }); this.signOut(); return; } this.setState({ confirmOut: true }); clearTimeout(this.outT); this.outT = setTimeout(() => this.setState({ confirmOut: false }), 4000); },
       gkeyDraft: st.gkeyDraft, onGkey: e => this.setState({ gkeyDraft: e.target.value.trim() }),
       gkeyBtn: st.gkeyDraft === st.gkey && st.gkey ? 'Saved ✓' : 'Save',
       saveGkey: () => { const k = st.gkeyDraft.trim(); lsSet('scanchk.gkey', k); this.saveShared('gkey', k); if (!k) { try { location.reload(); } catch (e) {} return; } this.setState({ gkey: k, gmErr: '' }, () => { this.gmLoading = ''; this.loadGoogle(k); }); },
