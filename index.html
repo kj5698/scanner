@@ -147,7 +147,7 @@ input{font:inherit}
       <sc-if value="{{ showLink }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid #eeebe4">
           <div style="font-weight:600;font-size:14px">Driver setup link</div>
-          <div style="font-size:13px;color:#55524a;line-height:1.45">Text this link to a driver. It connects their phone to your sheet, then they pick their name and enter their PIN.</div>
+          <div style="font-size:13px;color:#55524a;line-height:1.45">{{ linkHelp }}</div>
           <div style="display:flex;gap:8px">
             <input readOnly value="{{ driverLink }}" style="flex:1;min-width:0;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#33312b">
             <button onClick="{{ copyLink }}" style="flex:none;height:40px;padding:0 14px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ copyLabel }}</button>
@@ -1179,7 +1179,7 @@ async function geocodeAddr(a) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.0.1', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.0.2', APP_BUILD = '2026-11-13';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = {
@@ -2459,9 +2459,10 @@ class Component extends DCLogic {
           toggleRemember: () => this.setState({ navRemember: !st.navRemember }),
           close: () => this.setState({ navPick: null }), stop: e => e.stopPropagation() };
       })() : null,
-      showLink: isAdmin && !st.demo && !!st.url, driverLink: (() => { try { return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); } catch (e) { return ''; } })(),
+      linkHelp: st.fbMode ? 'Text this link to a driver. They open it, pick their name and enter the PIN you set in Team → Drivers & PINs. Android drivers can also install the app.' : 'Text this link to a driver. It connects their phone to your sheet, then they pick their name and enter their PIN.',
+      showLink: isAdmin && !st.demo && (st.fbMode || !!st.url), driverLink: (() => { try { if (st.fbMode) return location.origin + location.pathname; return location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); } catch (e) { return ''; } })(),
       copyLabel: st.linkCopied ? 'Copied ✓' : 'Copy',
-      copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
+      copyLink: () => { const l = st.fbMode ? location.origin + location.pathname : location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
       days: (() => { const dd = this.days(); return [['today', 'Today ' + dd.tl], ['tomorrow', 'Tomorrow ' + dd.ml], ['both', 'Both']].map(([k, l]) => { const on = st.day === k; return { label: l, pick: () => { localStorage.setItem('scanchk.day', k); this.setState({ day: k, routeSel: null, locked: null, scans: [], flash: null }); }, bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }); })(),
       demo: st.demo, showSettings: st.settings, urlDraft: st.urlDraft, errText: st.err,
       sourceLabel: st.fbMode ? (st.loading ? 'Connecting to Firebase…' : d && st.me ? st.me.name + ' · ' + (st.fbOffline ? 'offline, will sync' : 'live') + ' · ' + d.invoices.size + ' invoices' : 'Firebase · sign in') : st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
