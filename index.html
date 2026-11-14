@@ -1179,10 +1179,17 @@ async function geocodeAddr(a) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.0.0', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.0.1', APP_BUILD = '2026-11-13';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
+  authDomain: 'scanner-5ec16.firebaseapp.com',
+  projectId: 'scanner-5ec16',
+  storageBucket: 'scanner-5ec16.firebasestorage.app',
+  messagingSenderId: '180532239827',
+  appId: '1:180532239827:web:e4482a8389259d684ae326'
+};
 const FB_VER = '12.19.0';
 const FB_COLS = ['invoices', 'items', 'upcs', 'servicesold', 'services', 'chargers', 'deliveries', 'comebacks', 'locations', 'drivers'];
 const LOG_DAYS = 60;
