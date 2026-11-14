@@ -27,3 +27,20 @@ https://github.com/kj5698/scanner/releases/download/apk-latest/scan-check.apk
 - The app loads the live version from GitHub Pages, so app updates arrive without reinstalling.
 - Camera, location and photo permissions are requested the first time they are used.
 - `android/debug.keystore` is a fixed signing key so a rebuilt APK installs over the old one.
+
+## Firebase (live updates, works offline) — app v2.0
+The app runs on Google Sheets until a Firebase project is connected, then switches to Firebase.
+
+One-time setup (about 15 minutes, on a computer):
+1. Go to https://console.firebase.google.com → **Add project** (Google Analytics not needed).
+2. **Build → Authentication → Get started → Email/Password → Enable → Save.**
+3. **Build → Firestore Database → Create database** → pick a US location → *Start in production mode*.
+4. **Firestore → Rules:** replace everything with the contents of `firestore.rules` from this repo → **Publish**.
+5. **Project settings (gear) → Your apps → Web (</>)** → register "Scan-Check" (no hosting) → copy the `firebaseConfig` block.
+6. Send that block to Claude to build it into the app (then no phone needs any setup), or paste it in the app under **Settings → Switch to Firebase** to try it on one phone first.
+7. In the app: **Set up the admin account** (your name + PIN) → **Settings → Copy from Google Sheets** → **Team → Drivers & PINs** to add each driver.
+
+Notes:
+- The firebaseConfig values are not secret; access is controlled by sign-in and `firestore.rules`.
+- Delivery photos and signatures are stored in Firestore (`proofs`), so the free Spark plan is enough; no Cloud Storage needed.
+- Drivers sign in with name + PIN; accounts are Firebase Email/Password users named `driver-<name>@scancheck.app`.

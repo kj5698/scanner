@@ -52,6 +52,16 @@ input{font:inherit}
   </nav>
   </div>
 
+  <sc-if value="{{ proofView }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeProof }}" style="position:fixed;inset:0;z-index:2100;background:rgba(28,27,24,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px">
+      <div style="color:#fff;font:600 16px 'IBM Plex Sans'">{{ proofView.title }}</div>
+      <sc-if value="{{ proofView.src }}" hint-placeholder-val="{{ false }}">
+        <img src="{{ proofView.src }}" alt="{{ proofView.title }}" style="max-width:100%;max-height:75vh;border-radius:10px;background:#fff">
+      </sc-if>
+      <div style="color:#fff;font-size:14px;max-width:340px;text-align:center;line-height:1.45">{{ proofView.msg }}</div>
+      <div style="color:#cfcbc0;font-size:12px">Tap anywhere to close</div>
+    </div>
+  </sc-if>
   <sc-if value="{{ navPick }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ navPick.close }}" style="position:fixed;inset:0;z-index:2000;background:rgba(28,27,24,0.45);display:flex;align-items:flex-end;justify-content:center">
       <div onClick="{{ navPick.stop }}" style="width:100%;max-width:520px;background:#fff;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 24px rgba(0,0,0,0.18)">
@@ -85,6 +95,41 @@ input{font:inherit}
           <button onClick="{{ resetNavApp }}" style="flex:none;height:36px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">Ask every time</button>
         </sc-if>
       </div>
+      <sc-if value="{{ fbOn }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
+          <div style="font-weight:600;font-size:14px">Firebase</div>
+          <div style="font-size:13px;color:#33312b;line-height:1.45">{{ fbStatus }}</div>
+          <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b675e;flex-wrap:wrap">Change my PIN
+              <input type="password" inputMode="numeric" value="{{ myPin }}" onChange="{{ onMyPin }}" placeholder="new PIN" style="width:110px;height:38px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18">
+              <button onClick="{{ changePin }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">Change</button></label>
+          </sc-if>
+          <sc-if value="{{ fbMsgSet }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#33312b">{{ fbMsg }}</div></sc-if>
+          <sc-if value="{{ canImport }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid #e2dfd7;border-radius:10px;background:#fbfaf7">
+              <div style="font-weight:600;font-size:13px">Copy data from Google Sheets</div>
+              <div style="font-size:12px;color:#55524a;line-height:1.45">Copies invoices, items, UPCs, services, come-backs, deliveries and scan history from your sheet into Firebase. Safe to run again: nothing is duplicated, and driver and stop changes made in the app are kept.</div>
+              <input value="{{ imp.url }}" onChange="{{ onImpUrl }}" placeholder="https://script.google.com/macros/s/…/exec" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;height:40px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <input value="{{ imp.name }}" onChange="{{ onImpName }}" placeholder="Sheet sign-in name (if any)" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;height:40px;flex:1;font-size:13px">
+                <input type="password" inputMode="numeric" value="{{ imp.pin }}" onChange="{{ onImpPin }}" placeholder="PIN" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;height:40px;width:90px;font-size:13px">
+              </div>
+              <button onClick="{{ runImport }}" style="height:44px;padding:0 16px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer">{{ impBtn }}</button>
+              <sc-if value="{{ imp.msg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#33312b;line-height:1.45">{{ imp.msg }}</div></sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ fbOffer }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
+          <div style="font-weight:600;font-size:14px">Switch to Firebase (live updates)</div>
+          <div style="font-size:12px;color:#55524a;line-height:1.45">Paste the Firebase web config from your Firebase project (Project settings → Your apps → Config). Once it is built into the app, phones need no setup at all.</div>
+          <textarea value="{{ fbCfgDraft }}" onChange="{{ onFbCfg }}" placeholder="const firebaseConfig = { apiKey: …, projectId: … }" style="height:90px;padding:8px 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1c1b18;resize:vertical"></textarea>
+          <button onClick="{{ connectFb }}" style="height:44px;padding:0 16px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer;align-self:flex-start">Connect Firebase</button>
+          <sc-if value="{{ fbMsgSet }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:oklch(0.45 0.16 28)">{{ fbMsg }}</div></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ sheetsOn }}" hint-placeholder-val="{{ false }}">
       <div style="font-weight:600;font-size:14px">Google Sheets connection</div>
       <div style="font-size:13px;color:#55524a;line-height:1.45;text-wrap:pretty">Paste the Web app URL from your Apps Script deployment (ends in <span style="font-family:'IBM Plex Mono',monospace">/exec</span>). <a href="setup-guide.html" style="font-weight:600">Step-by-step setup guide</a></div>
       <input value="{{ urlDraft }}" onChange="{{ onUrlDraft }}" placeholder="https://script.google.com/macros/s/…/exec" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;background:#fbfaf7;min-width:0">
@@ -92,6 +137,7 @@ input{font:inherit}
         <button onClick="{{ saveUrl }}" style="height:44px;padding:0 16px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer">Connect</button>
         <button onClick="{{ useDemo }}" style="height:44px;padding:0 16px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer">Use demo data</button>
       </div>
+      </sc-if>
       <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid #eeebe4">
           <div style="flex:1;min-width:0;font-size:13px;color:#33312b;line-height:1.4">Signed in as {{ meText }}</div>
@@ -116,6 +162,23 @@ input{font:inherit}
   </sc-if>
 
   <main style="flex:1;padding:14px 16px 120px;display:flex;flex-direction:column;gap:14px">
+
+    <sc-if value="{{ fbSetup }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+        <div style="font-size:22px;font-weight:600;letter-spacing:-0.01em">Set up the admin account</div>
+        <div style="font-size:14px;color:#55524a;line-height:1.5;max-width:320px;text-wrap:pretty">Firebase is connected and has no accounts yet. Create yours first; then add drivers in the Team tab.</div>
+        <div style="width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;text-align:left">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Your name
+            <input value="{{ setupName }}" onChange="{{ onSetupName }}" placeholder="e.g. KJ" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0"></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Pick a PIN (4–8 digits)
+            <input type="password" inputMode="numeric" value="{{ setupPin }}" onChange="{{ onSetupPin }}" placeholder="••••" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;font-size:22px;letter-spacing:0.3em;text-align:center"></label>
+          <button onClick="{{ submitSetup }}" style="height:52px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:600 16px 'IBM Plex Sans';cursor:pointer">{{ setupBtn }}</button>
+        </div>
+        <sc-if value="{{ loginErr }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13px;color:oklch(0.45 0.16 28);font-weight:500;line-height:1.4;max-width:320px">{{ loginErr }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
 
     <sc-if value="{{ authNeeded }}" hint-placeholder-val="{{ false }}">
       <div style="background:#fff;border:1px solid #e2dfd7;border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
@@ -793,6 +856,25 @@ input{font:inherit}
             </div>
           </label>
         </div>
+        <sc-if value="{{ team.fbTeam }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-weight:600;font-size:14px">Drivers &amp; PINs</div>
+            <sc-for list="{{ team.accounts }}" as="ac" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eeebe4">
+                <div style="flex:1;min-width:0;font-size:14px;color:{{ ac.color }}">{{ ac.label }}</div>
+                <sc-if value="{{ ac.canToggle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ac.toggle }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer;height:34px">{{ ac.toggleLabel }}</button></sc-if>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <input value="{{ team.newName }}" onChange="{{ team.onNewName }}" placeholder="Name" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;height:40px;flex:1;min-width:120px">
+              <input type="password" inputMode="numeric" value="{{ team.newPin }}" onChange="{{ team.onNewPin }}" placeholder="PIN" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0;height:40px;width:90px">
+              <select value="{{ team.newRole }}" onChange="{{ team.onNewRole }}" style="height:40px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18"><option value="driver">Driver</option><option value="admin">Admin</option></select>
+              <button onClick="{{ team.addDriver }}" style="height:44px;padding:0 16px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer;height:40px">Add</button>
+            </div>
+            <sc-if value="{{ team.fbMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#33312b;line-height:1.4">{{ team.fbMsg }}</div></sc-if>
+            <div style="font-size:11px;color:#6b675e;line-height:1.4">Drivers sign in by picking their name and typing this PIN. They can change it later in Settings. To stop someone signing in, tap Turn off.</div>
+          </div>
+        </sc-if>
         <sc-if value="{{ team.noDrivers }}" hint-placeholder-val="{{ false }}">
           <div style="padding:14px 16px;border:1px dashed #cfcbc0;border-radius:12px;font-size:14px;color:#33312b;line-height:1.5">Add a DRIVERS tab with the columns Name, PIN and Role. Put "admin" in Role for yourself and "driver" for everyone else. The first driver is the default for invoices not listed in ASSIGNMENTS.</div>
         </sc-if>
@@ -942,7 +1024,7 @@ input{font:inherit}
       </div>
     </sc-if>
   </main>
-
+  <div style="padding:18px 16px calc(24px + env(safe-area-inset-bottom));text-align:center;font:500 11px 'IBM Plex Mono',monospace;color:#9a958a;letter-spacing:0.04em">{{ versionText }}</div>
 
 </div>
 </x-dc>
@@ -1097,6 +1179,27 @@ async function geocodeAddr(a) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
+const APP_VERSION = '2.0.0', APP_BUILD = '2026-11-13';
+// Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
+// until then an admin can paste it in Settings on one phone to try Firebase.
+const FIREBASE_CONFIG = null;
+const FB_VER = '12.19.0';
+const FB_COLS = ['invoices', 'items', 'upcs', 'servicesold', 'services', 'chargers', 'deliveries', 'comebacks', 'locations', 'drivers'];
+const LOG_DAYS = 60;
+const fbId = s => (String(s == null ? '' : s).trim().replace(/[\/#\[\]?*]/g, '_').replace(/^\.+$/, '_').slice(0, 300)) || '_';
+const fbEmail = name => 'driver-' + (String(name).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x') + '@scancheck.app';
+const fbPass = pin => 'scanchk-' + String(pin).trim();
+const todayYmd = () => { const t = new Date(), p2 = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()); };
+const loadScript = src => new Promise((ok, bad) => { if (document.querySelector('script[data-src="' + src + '"]')) return ok(); const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.setAttribute('data-src', src); sc.onload = ok; sc.onerror = () => bad(new Error('Could not load ' + src.split('/').pop())); document.head.appendChild(sc); });
+const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
+function parseFbConfig(txt) {
+  const t = String(txt || '').trim(); if (!t) return null;
+  try { const j = JSON.parse(t); if (j.apiKey && j.projectId) return j; } catch (e) {}
+  const o = {}; ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'].forEach(k => { const m = t.match(new RegExp(k + "\\s*:\\s*[\"']([^\"']+)[\"']")); if (m) o[k] = m[1]; });
+  return o.apiKey && o.projectId ? o : null;
+}
+const fbErr = e => { const c = String((e && (e.code || e.message)) || e); return /invalid-credential|wrong-password|user-not-found|invalid-login/.test(c) ? 'Wrong name or PIN.' : /too-many-requests/.test(c) ? 'Too many tries. Wait a few minutes and try again.' : /email-already-in-use/.test(c) ? 'That name already has an account.' : /network-request-failed|unavailable/.test(c) ? 'No connection. Check the signal and try again.' : /permission-denied|insufficient permissions/i.test(c) ? 'Not allowed. Check the Firestore rules (see setup steps).' : /requires-recent-login/.test(c) ? 'Sign out and back in, then change the PIN.' : c.replace(/^Firebase:\s*/, ''); };
+const invId = r => { const ks = Object.keys(r); const k = ks.find(k => /^invoice/i.test(k)) || ks.find(k => /inv/i.test(k)); return k ? String(r[k]).trim() : ''; };
 const RES_MIN = 10, RES_MAX = 30; // charge when about 10–30 mi of range are left
 const ST_ORDER = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'Services'];
 const stRank = st => { const i = ST_ORDER.indexOf(st); return i < 0 ? 99 : i; };
@@ -1127,6 +1230,7 @@ class Component extends DCLogic {
     authNeeded: false, pinNames: [], pinName: localStorage.getItem('scanchk.pinname') || '', pin: '', loginErr: '', loginBusy: false, linkCopied: false,
     routeInfo: null, chargers: null, myLoc: null, startMode: 'auto', locErr: '',
     range: localStorage.getItem('scanchk.range') || '',
+    fbMode: !!fbCfg(), fbNoAdmin: false, fbReady: false, fbProject: (fbCfg() || {}).projectId || '', fbCfgDraft: '', fbNew: { name: '', pin: '', role: 'driver' }, fbMsg: '', imp: { url: '', name: '', pin: '', busy: false, msg: '' }, myPin: '', proofView: null, setupName: '', setupPin: '',
     navApp: lsGet('scanchk.navApp', ''), navPick: null, navRemember: false, battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null,
     geo: (() => { try { const g = JSON.parse(localStorage.getItem('scanchk.geo') || '{}'), now = Date.now(); Object.keys(g).forEach(k => { if (!g[k] || g[k] === 'x' || (g[k].src === 'g' && now - (g[k].t || 0) > 29 * 864e5)) delete g[k]; }); return g; } catch (e) { return {}; } })(),
     gkey: lsGet('scanchk.gkey', ''), gkeyDraft: lsGet('scanchk.gkey', ''), gm: false, gmErr: ''
@@ -1159,12 +1263,17 @@ class Component extends DCLogic {
         history.replaceState(null, '', location.pathname);
       }
     } catch (e) {}
-    this.load();
+    this.onProofClick = e => {
+      const a = e.target && e.target.closest ? e.target.closest('a[href^="#proof:"]') : null;
+      if (!a) return; e.preventDefault(); e.stopPropagation(); this.showProof(a.getAttribute('href'));
+    };
+    document.addEventListener('click', this.onProofClick, true);
+    if (this.state.fbMode) { this.state.demo = false; this.fbStart(); } else this.load();
     this.fetchWx();
     if (this.state.gkey) this.loadGoogle(this.state.gkey);
     this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
     document.addEventListener('visibilitychange', this.onVis);
-    this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading) this.load(); }, 60000);
+    this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading && !this.state.fbMode) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
         if (!document.querySelector('link[rel="manifest"]')) { const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.json'; document.head.appendChild(l); }
@@ -1479,6 +1588,7 @@ class Component extends DCLogic {
   }
 
   async load() {
+    if (this.state.fbMode) { if (this.fbData) this.fbRebuild(true); return; }
     if (this.state.demo) { this.setState({ data: this.parse(SAMPLE), err: '', loading: false, authNeeded: false, me: { name: 'You (demo admin)', email: 'demo', role: 'admin' } }); return; }
     this.setState({ loading: true, err: '' });
     const u = this.state.url;
@@ -1502,24 +1612,34 @@ class Component extends DCLogic {
   }
 
   call(params) {
+    if (this.state.fbMode) return this.fbCall(params);
+    return this.sheetCall(this.state.url, params, this.state.session);
+  }
+  sheetCall(url, params, session) {
     return new Promise((resolve, reject) => {
       const cb = '__sc' + Date.now() + Math.floor(Math.random() * 1e4);
-      const all = this.state.session && params.action !== 'login' ? { ...params, session: this.state.session } : params;
+      const all = session && params.action !== 'login' ? { ...params, session } : params;
       const qs = Object.keys(all).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(all[k])).join('&');
       const s = document.createElement('script');
       const done = (fn, v) => { clearTimeout(t); delete window[cb]; s.remove(); fn(v); };
       const t = setTimeout(() => done(reject, new Error('no response')), 25000);
       window[cb] = data => {
-        if (data && data.ok === false && data.auth && params.action !== 'login') this.signOut(data.error);
+        if (data && data.ok === false && data.auth && params.action !== 'login' && url === this.state.url && !this.state.fbMode) this.signOut(data.error);
         done(resolve, data);
       };
       s.onerror = () => done(reject, new Error('link blocked or not public'));
-      s.src = this.state.url + '?callback=' + cb + (qs ? '&' + qs : '');
+      s.src = url + '?callback=' + cb + (qs ? '&' + qs : '');
       document.head.appendChild(s);
     });
   }
 
   async signOut(msg) {
+    if (this.state.fbMode) {
+      if (this.watchId != null && navigator.geolocation) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
+      this.fbStop(); try { await this.fbAuth.signOut(); } catch (e) {}
+      this.setState({ me: null, data: null, locked: null, scans: [], authNeeded: true, loading: false, settings: false, session: '', loginErr: msg || '' });
+      return;
+    }
     localStorage.removeItem('scanchk.session'); localStorage.removeItem('scanchk.me');
     try { window.google && google.accounts.id.disableAutoSelect(); } catch (e) {}
     if (this.watchId != null && navigator.geolocation) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
@@ -1532,6 +1652,11 @@ class Component extends DCLogic {
     if (!name) return this.setState({ loginErr: 'Pick your name.' });
     if (!pin) return this.setState({ loginErr: 'Enter your PIN.' });
     this.setState({ loginBusy: true, loginErr: '' });
+    if (this.state.fbMode) {
+      try { lsSet('scanchk.pinname', name); await this.fbAuth.signInWithEmailAndPassword(fbEmail(name), fbPass(pin)); this.setState({ loginBusy: false, pin: '' }); }
+      catch (e) { this.setState({ loginBusy: false, loginErr: fbErr(e), pin: '' }); }
+      return;
+    }
     try {
       const j = await this.call({ action: 'login', name, pin });
       if (!j || !j.ok) throw new Error((j && j.error) || 'Sign-in failed. Try again.');
@@ -1545,7 +1670,7 @@ class Component extends DCLogic {
 
   startLoc() {
     const me = this.state.me;
-    if (this.watchId != null || !navigator.geolocation || this.state.demo || !me || me.role !== 'driver' || !this.state.session) return;
+    if (this.watchId != null || !navigator.geolocation || this.state.demo || !me || me.role !== 'driver' || (!this.state.session && !this.state.fbMode)) return;
     this.watchId = navigator.geolocation.watchPosition(p => {
       const now = Date.now(), c = [p.coords.latitude, p.coords.longitude];
       if (this.lastLocSent && now - this.lastLocSent.t < 120000 && hav(this.lastLocSent.c, c) < 0.15) return;
@@ -1554,6 +1679,232 @@ class Component extends DCLogic {
     }, () => {}, { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 });
   }
 
+  // ---------------- Firebase ----------------
+  async fbInit() {
+    if (this.fbApp) return;
+    const cfg = fbCfg(), base = 'https://www.gstatic.com/firebasejs/' + FB_VER + '/';
+    await loadScript(base + 'firebase-app-compat.js');
+    await loadScript(base + 'firebase-auth-compat.js');
+    await loadScript(base + 'firebase-firestore-compat.js');
+    const fb = window.firebase;
+    this.fbApp = fb.apps.find(a => a.name === '[DEFAULT]') || fb.initializeApp(cfg);
+    this.fs = fb.firestore();
+    try { await this.fs.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+    this.fbAuth = fb.auth();
+  }
+  async fbStart() {
+    this.setState({ loading: true, err: '' });
+    try { await this.fbInit(); }
+    catch (e) { this.setState({ loading: false, err: 'Could not start Firebase (' + e.message + '). Check the internet connection, then tap Refresh.' }); return; }
+    this.fs.doc('public/roster').onSnapshot(d => {
+      const names = d.exists ? (d.data().names || []) : [];
+      this.setState(s => ({ pinNames: names, fbNoAdmin: !d.exists, pinName: s.pinName || lsGet('scanchk.pinname', '') || names[0] || '' }));
+    }, () => {});
+    this.fbAuth.onAuthStateChanged(async u => {
+      if (this.settingUp) return;
+      if (!u) { this.fbStop(); this.setState({ authNeeded: true, me: null, data: null, loading: false, session: '', fbReady: true }); return; }
+      try {
+        const dd = await this.fs.doc('drivers/' + u.uid).get();
+        if (!dd.exists || dd.data().Active === false) { await this.fbAuth.signOut(); this.setState({ loginErr: 'This account is not active. Ask your admin.' }); return; }
+        const me = { name: dd.data().Name, role: dd.data().Role === 'admin' ? 'admin' : 'driver', uid: u.uid };
+        lsSet('scanchk.me', JSON.stringify(me));
+        this.setState({ me, authNeeded: false, session: 'fb', loading: true, fbReady: true, loginErr: '' }, () => { this.fbListen(); this.startLoc(); });
+      } catch (e) { this.setState({ loading: false, err: 'Could not load your account: ' + fbErr(e) }); }
+    });
+  }
+  fbStop() { (this.unsubs || []).forEach(f => { try { f(); } catch (e) {} }); this.unsubs = []; this.fbData = null; }
+  fbListen() {
+    this.fbStop(); this.fbData = {}; this.fbSeen = {};
+    const on = (key, q) => this.unsubs.push(q.onSnapshot(snap => {
+      this.fbData[key] = snap.docs.map(d => ({ ...d.data(), __id: d.id })); this.fbSeen[key] = true;
+      this.setState({ fbPending: snap.metadata && snap.metadata.hasPendingWrites, fbOffline: snap.metadata && snap.metadata.fromCache });
+      this.fbRebuild();
+    }, e => this.setState({ err: 'Live data error (' + key + '): ' + fbErr(e) })));
+    FB_COLS.forEach(c => on(c, this.fs.collection(c)));
+    const cut = new Date(Date.now() - LOG_DAYS * 864e5), p2 = n => String(n).padStart(2, '0');
+    on('log', this.fs.collection('log').where('Day', '>=', cut.getFullYear() + '-' + p2(cut.getMonth() + 1) + '-' + p2(cut.getDate())));
+    this.unsubs.push(this.fs.doc('settings/app').onSnapshot(d => {
+      const v = d.exists ? d.data() : {}, up = {};
+      if (v.depot != null && v.depot !== this.state.depot) { lsSet('scanchk.depot', v.depot); up.depot = v.depot; up.depotDraft = v.depot; this._wxKey = ''; }
+      if (v.gkey != null && v.gkey !== this.state.gkey) { lsSet('scanchk.gkey', v.gkey); up.gkey = v.gkey; up.gkeyDraft = v.gkey; }
+      if (Object.keys(up).length) this.setState(up, () => { if (up.gkey) { this.gmLoading = ''; this.loadGoogle(up.gkey); } if (up.depot) this.fetchWx(); });
+    }, () => {}));
+  }
+  fbRebuild(now) {
+    clearTimeout(this.fbT);
+    const go = () => {
+      const F = this.fbData; if (!F) return;
+      if (!['invoices', 'items', 'drivers'].every(k => this.fbSeen[k])) return;
+      const strip = r => { const o = { ...r }; delete o.__id; delete o.ts; return o; };
+      const raw = {}; FB_COLS.concat(['log']).forEach(k => raw[k] = (F[k] || []).map(strip));
+      raw.drivers = (F.drivers || []).filter(d => d.Active !== false).map(d => ({ Name: d.Name, Role: d.Role }));
+      const me = this.state.me, k = s => String(s || '').trim().toLowerCase();
+      if (me && me.role !== 'admin') {
+        raw.invoices = raw.invoices.filter(r => k(r.Driver) === k(me.name));
+        raw.comebacks = raw.comebacks.filter(r => k(r.Driver) === k(me.name));
+        const ids = {}; raw.invoices.forEach(r => ids[String(r.Invoice).trim()] = 1); raw.comebacks.forEach(r => { ids[String(r.ComebackID).trim()] = 1; ids[String(r.Invoice).trim()] = ids[String(r.Invoice).trim()] || 0; });
+        const keep = r => ids[String(pick(r, [/^invoice/i, /inv/i])).trim()];
+        ['items', 'servicesold', 'log', 'deliveries'].forEach(c => raw[c] = raw[c].filter(keep));
+        raw.drivers = []; raw.locations = [];
+      }
+      this.setState({ data: this.parse(raw), loading: false, err: this.state.err && /Live data error/.test(this.state.err) ? '' : this.state.err });
+    };
+    if (now) go(); else this.fbT = setTimeout(go, 120);
+  }
+  fbDocFor(col, field, val) { const v = String(val).trim(); return ((this.fbData || {})[col] || []).find(r => String(r[field]).trim() === v); }
+  fbInvRef(id) {
+    const cb = this.fbDocFor('comebacks', 'ComebackID', id);
+    if (cb) return this.fs.collection('comebacks').doc(cb.__id);
+    const iv = this.fbDocFor('invoices', 'Invoice', id);
+    return this.fs.collection('invoices').doc(iv ? iv.__id : fbId(id));
+  }
+  fbCommit(b, what) { b.commit().catch(e => this.setState({ err: (what || 'Change') + ' not saved: ' + fbErr(e) })); }
+  fbLogRow(r) {
+    const t = new Date(r.ts || Date.now()), p2 = n => String(n).padStart(2, '0');
+    return { Timestamp: t.toISOString(), Day: t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()), Invoice: r.invoice || '', UPC: r.upc || '', Model: r.model || '', Result: r.result || '', Device: r.device || '', Driver: (this.state.me || {}).name || '' };
+  }
+  async fbCall(p) {
+    if (!this.fs) await this.fbInit();
+    const fs = this.fs, me = this.state.me || {}, now = new Date().toISOString();
+    const a = p.action || '';
+    if (a === 'config') return { ok: true, config: true, auth: true, drivers: this.state.pinNames };
+    if (a === 'log') {
+      const b = fs.batch(); JSON.parse(p.rows || '[]').forEach(r => b.set(fs.collection('log').doc(), this.fbLogRow(r))); this.fbCommit(b, 'Scan'); return { ok: true };
+    }
+    if (a === 'loc') { fs.collection('locations').doc(fbId(me.name)).set({ Name: me.name, Lat: +p.lat, Lon: +p.lon, Updated: now }).catch(() => {}); return { ok: true }; }
+    if (a === 'upsertUpc') {
+      const digits = String(p.upc).replace(/\D/g, ''); const ex = ((this.fbData || {}).upcs || []).find(r => norm(r.UPC) === norm(digits));
+      fs.collection('upcs').doc(ex ? ex.__id : fbId(digits)).set({ UPC: digits, Model: p.model, ...(p.desc ? { Description: p.desc } : {}), ...(ex ? {} : { Date: now }) }, { merge: true }).catch(e => this.setState({ err: 'UPC not saved: ' + fbErr(e) }));
+      return ex ? { ok: true, updated: true } : { ok: true, added: true };
+    }
+    if (a === 'service') {
+      const rows = (this.fbData || {}).servicesold || [];
+      if (p.op === 'add') {
+        const id = rows.reduce((m, r) => Math.max(m, parseFloat(r.ID) || 0), 0) + 1;
+        fs.collection('servicesold').doc(String(id)).set({ ID: String(id), InvoiceNumber: p.invoice, ServiceID: p.serviceId, Amount: p.amount || '', STATUS: p.status || '', Date: now }).catch(e => this.setState({ err: 'Service not saved: ' + fbErr(e) }));
+        return { ok: true, id: String(id) };
+      }
+      const r = rows.find(x => String(x.ID).trim() === String(p.id).trim() && String(pick(x, [/inv/i])).trim() === String(p.invoice).trim());
+      if (!r) return { ok: false, error: 'Service not found. Try again in a moment.' };
+      const ref = fs.collection('servicesold').doc(r.__id);
+      (p.op === 'delete' ? ref.delete() : ref.update({ ServiceID: p.serviceId, Amount: p.amount || '', STATUS: p.status || '' })).catch(e => this.setState({ err: 'Service not saved: ' + fbErr(e) }));
+      return p.op === 'delete' ? { ok: true, deleted: true } : { ok: true, updated: true };
+    }
+    if (a === 'assign') { if (me.role !== 'admin') return { ok: false, error: 'Only admins can reassign invoices.' }; this.fbInvRef(p.invoice).update({ Driver: p.driver || '' }).catch(e => this.setState({ err: 'Driver not saved: ' + fbErr(e) })); return { ok: true }; }
+    if (a === 'stops') {
+      if (me.role !== 'admin') return { ok: false, error: 'Only admins can change stop order.' };
+      const b = fs.batch(); JSON.parse(p.rows || '[]').forEach(r => b.update(this.fbInvRef(r.invoice), { ...(r.driver ? { Driver: r.driver } : {}), Stop: r.stop === '' || r.stop == null ? '' : String(r.stop) })); this.fbCommit(b, 'Stop order'); return { ok: true };
+    }
+    if (a === 'comeback') {
+      const n = ((this.fbData || {}).comebacks || []).filter(r => String(r.Invoice).trim() === String(p.invoice).trim()).length;
+      const id = String(p.invoice).trim() + '-CB' + (n + 1), b = fs.batch();
+      b.set(fs.collection('comebacks').doc(fbId(id)), { Timestamp: now, ComebackID: id, Invoice: p.invoice, Date: p.date || '', Customer: p.customer || '', Address: p.address || '', Items: p.items || '', Services: p.services || '', Reason: p.reason || '', Note: p.note || '', Driver: p.driver || '', Amount: 0, CreatedBy: me.name || '' });
+      b.set(fs.collection('log').doc(), this.fbLogRow({ invoice: p.invoice, model: p.items || '', result: 'COMEBACK ' + id + (p.reason ? ' · ' + p.reason : '') }));
+      this.fbCommit(b, 'Come-back'); return { ok: true, id };
+    }
+    return { ok: false, error: 'Unknown action ' + a };
+  }
+  fbProof(inv, o, receiver, photo, sig) {
+    const fs = this.fs, me = this.state.me || {}, id = fbId(inv) + '-' + Date.now(), b = fs.batch(), now = new Date().toISOString();
+    b.set(fs.collection('proofs').doc(id), { Invoice: inv, photo: photo || '', sig: sig || '', Timestamp: now });
+    b.set(fs.collection('deliveries').doc(id), { Timestamp: now, Invoice: inv, Customer: o.customer || '', 'Received by': receiver, Photo: photo ? '#proof:' + id + ':photo' : '', Signature: sig ? '#proof:' + id + ':sig' : '', Driver: me.name || '' });
+    b.set(fs.collection('log').doc(), this.fbLogRow({ invoice: inv, result: 'DELIVERY_COMPLETE' }));
+    this.fbCommit(b, 'Delivery');
+    return { photo: photo ? '#proof:' + id + ':photo' : '', sig: sig ? '#proof:' + id + ':sig' : '' };
+  }
+  async showProof(href) {
+    const m = href.match(/^#proof:(.+):(photo|sig)$/); if (!m || !this.fs) return;
+    this.setState({ proofView: { src: '', title: m[2] === 'sig' ? 'Signature' : 'Delivery photo', msg: 'Loading…' } });
+    try { const d = await this.fs.collection('proofs').doc(m[1]).get(); const v = d.exists ? d.data()[m[2]] : ''; this.setState({ proofView: { src: v, title: m[2] === 'sig' ? 'Signature' : 'Delivery photo', msg: v ? '' : 'Not uploaded yet. It will appear once the phone that took it is back online.' } }); }
+    catch (e) { this.setState({ proofView: { src: '', title: 'Delivery photo', msg: fbErr(e) } }); }
+  }
+  async fbSetupAdmin() {
+    const name = this.state.setupName.trim(), pin = this.state.setupPin.trim();
+    if (!name) return this.setState({ loginErr: 'Enter your name.' });
+    if (!/^\d{4,8}$/.test(pin)) return this.setState({ loginErr: 'Pick a PIN of 4 to 8 digits.' });
+    this.setState({ loginBusy: true, loginErr: '' });
+    this.settingUp = true;
+    try {
+      const cred = await this.fbAuth.createUserWithEmailAndPassword(fbEmail(name), fbPass(pin));
+      await this.fs.doc('drivers/' + cred.user.uid).set({ Name: name, Role: 'admin', Active: true, Email: fbEmail(name), Created: new Date().toISOString() });
+      await this.fs.doc('public/roster').set({ names: [name] });
+      lsSet('scanchk.pinname', name);
+      this.setState({ loginBusy: false, setupPin: '' });
+      const me = { name, role: 'admin', uid: cred.user.uid };
+      this.settingUp = false;
+      this.setState({ me, authNeeded: false, session: 'fb', loading: true, fbReady: true }, () => this.fbListen());
+    } catch (e) { this.settingUp = false; this.setState({ loginBusy: false, loginErr: fbErr(e) }); }
+  }
+  async fbAddDriver() {
+    const f = this.state.fbNew, name = f.name.trim(), pin = f.pin.trim();
+    if (!name) return this.setState({ fbMsg: 'Enter the driver\'s name.' });
+    if (!/^\d{4,8}$/.test(pin)) return this.setState({ fbMsg: 'PIN must be 4 to 8 digits.' });
+    if ((this.state.pinNames || []).some(n => n.toLowerCase() === name.toLowerCase())) return this.setState({ fbMsg: name + ' is already on the team.' });
+    this.setState({ fbMsg: 'Creating ' + name + '…' });
+    try {
+      const fb = window.firebase, app2 = fb.apps.find(a => a.name === 'sc-admin') || fb.initializeApp(fbCfg(), 'sc-admin');
+      let uid;
+      try { const cred = await app2.auth().createUserWithEmailAndPassword(fbEmail(name), fbPass(pin)); uid = cred.user.uid; }
+      catch (e) { if (!/email-already-in-use/.test(e.code || '')) throw e; const cred = await app2.auth().signInWithEmailAndPassword(fbEmail(name), fbPass(pin)); uid = cred.user.uid; }
+      await app2.auth().signOut();
+      await this.fs.doc('drivers/' + uid).set({ Name: name, Role: f.role === 'admin' ? 'admin' : 'driver', Active: true, Email: fbEmail(name), Created: new Date().toISOString() });
+      await this.fs.doc('public/roster').set({ names: window.firebase.firestore.FieldValue.arrayUnion(name) }, { merge: true });
+      this.setState({ fbNew: { name: '', pin: '', role: 'driver' }, fbMsg: '✓ ' + name + ' can now sign in with that PIN.' });
+    } catch (e) { this.setState({ fbMsg: /email-already-in-use|invalid-credential|wrong-password/.test(String(e.code || e.message)) ? 'An account named ' + name + ' already exists with a different PIN. Use a slightly different name (e.g. "' + name + ' 2").' : fbErr(e) }); }
+  }
+  async fbSetActive(d, active) {
+    try {
+      await this.fs.doc('drivers/' + d.__id).update({ Active: active });
+      const FV = window.firebase.firestore.FieldValue;
+      await this.fs.doc('public/roster').set({ names: active ? FV.arrayUnion(d.Name) : FV.arrayRemove(d.Name) }, { merge: true });
+    } catch (e) { this.setState({ fbMsg: fbErr(e) }); }
+  }
+  async fbChangePin() {
+    const pin = this.state.myPin.trim();
+    if (!/^\d{4,8}$/.test(pin)) return this.setState({ fbMsg: 'PIN must be 4 to 8 digits.' });
+    try { await this.fbAuth.currentUser.updatePassword(fbPass(pin)); this.setState({ myPin: '', fbMsg: '✓ Your PIN is changed.' }); }
+    catch (e) { this.setState({ fbMsg: fbErr(e) }); }
+  }
+  saveShared(field, value) { if (this.state.fbMode && this.fs && this.state.me && this.state.me.role === 'admin') this.fs.doc('settings/app').set({ [field]: value }, { merge: true }).catch(e => this.setState({ err: 'Setting not shared: ' + fbErr(e) })); }
+  async importSheet() {
+    const im = this.state.imp, url = (im.url || this.state.url || '').trim(), setMsg = (msg, busy) => this.setState(s => ({ imp: { ...s.imp, msg, busy: busy !== false } }));
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec/.test(url)) return setMsg('Paste your Google Script link (ends in /exec).', false);
+    try {
+      setMsg('Connecting to the sheet…');
+      let session = '';
+      const c = await this.sheetCall(url, { action: 'config' });
+      if (c && c.auth) {
+        if (!im.name || !im.pin) return setMsg('Your sheet uses PIN sign-in. Enter your sheet name and PIN above.', false);
+        const j = await this.sheetCall(url, { action: 'login', name: im.name, pin: im.pin });
+        if (!j || !j.ok) return setMsg('Sheet sign-in failed: ' + ((j && j.error) || 'try again'), false);
+        session = j.session;
+      }
+      setMsg('Reading the sheet…');
+      const raw = await this.sheetCall(url, {}, session);
+      if (!raw || raw.ok === false || !raw.invoices) return setMsg('Could not read the sheet: ' + ((raw && raw.error) || 'no data'), false);
+      const fs = this.fs, F = this.fbData || {}, ops = [];
+      const existingInv = {}; (F.invoices || []).forEach(r => existingInv[r.__id] = r);
+      (raw.invoices || []).forEach(r => { const id = invId(r); if (!id) return; const ex = existingInv[fbId(id)], row = { ...r, Invoice: id };
+        if (ex) { if (String(ex.Driver || '').trim()) delete row.Driver; const sk = Object.keys(row).find(k => /^\s*stop/i.test(k)); if (sk && String(ex[sk] || ex.Stop || '').trim()) delete row[sk]; }
+        ops.push(['invoices', fbId(id), row, true]); });
+      const cnt = {}, dup = key => { cnt[key] = (cnt[key] || 0) + 1; return fbId(key + (cnt[key] > 1 ? '#' + cnt[key] : '')); };
+      (raw.items || []).forEach(r => { const id = invId(r), m = pick(r, [/model/i, /sku/i, /part/i, /item/i]); if (id && m) ops.push(['items', dup(id + '|' + M(m)), r, false]); });
+      (raw.upcs || []).forEach(r => { const u = pick(r, [/upc/i, /barcode/i, /ean/i, /code/i]); if (norm(u)) ops.push(['upcs', fbId(u.replace(/\D/g, '')), r, true]); });
+      (raw.servicesold || []).forEach(r => { const id = pick(r, [/^id$/i]); ops.push(['servicesold', id ? fbId(id) : dup('svc|' + JSON.stringify(r)), r, false]); });
+      (raw.services || []).forEach(r => { const c2 = pick(r, [/code/i, /id$/i, /sku/i, /serv/i]); if (c2) ops.push(['services', fbId(c2), r, false]); });
+      (raw.chargers || []).forEach(r => ops.push(['chargers', dup('ch|' + (pick(r, [/name|title/i]) || JSON.stringify(r))), r, false]));
+      (raw.comebacks || []).forEach(r => { const id = pick(r, [/come.?back.?id|^cb.?id/i]); if (id) ops.push(['comebacks', fbId(id), r, true]); });
+      (raw.deliveries || []).forEach(r => ops.push(['deliveries', dup('d|' + invId(r) + '|' + pick(r, [/time|date/i])), r, false]));
+      (raw.log || []).forEach(r => { const ts = pick(r, [/time/i]), t = Date.parse(ts), y = isNaN(t) ? '' : toYmd(new Date(t).toISOString()); ops.push(['log', dup('l|' + invId(r) + '|' + ts + '|' + pick(r, [/upc/i]) + '|' + pick(r, [/result/i])), { ...r, Day: y || toYmd(ts) || todayYmd() }, false]); });
+      for (let i = 0; i < ops.length; i += 400) {
+        setMsg('Copying to Firebase… ' + Math.min(ops.length, i + 400) + ' of ' + ops.length);
+        const b = fs.batch(); ops.slice(i, i + 400).forEach(([col, id, row, merge]) => b.set(fs.collection(col).doc(id), row, merge ? { merge: true } : {}));
+        await b.commit();
+      }
+      const missing = (raw.drivers || []).map(d => d.Name).filter(n => n && !(this.state.pinNames || []).some(x => x.toLowerCase() === String(n).toLowerCase()));
+      setMsg('✓ Copied ' + (raw.invoices || []).length + ' invoices and ' + ops.length + ' rows in total.' + (missing.length ? ' Add these drivers in the Team tab with a PIN: ' + missing.join(', ') + '.' : ''), false);
+    } catch (e) { setMsg('Import stopped: ' + fbErr(e) + '. You can run it again; nothing gets duplicated.', false); }
+  }
   openCb(id) {
     const o = this.state.data.invoices.get(id); if (!o) return;
     const t = new Date(); t.setDate(t.getDate() + 1);
@@ -1954,7 +2305,10 @@ class Component extends DCLogic {
     const sig = this.sigRef.current ? this.sigRef.current.toDataURL('image/png') : '';
     this.setProof({ saving: true, error: '' });
     let res = null;
-    if (!this.state.demo) {
+    if (this.state.fbMode) {
+      try { res = this.fbProof(L, o, (p.receiver || '').trim(), p.photo, sig); }
+      catch (e) { return this.setProof({ saving: false, error: 'Could not save: ' + fbErr(e) }); }
+    } else if (!this.state.demo) {
       const body = JSON.stringify({ action: 'proof', session: this.state.session, invoice: L, customer: o.customer, receiver: (p.receiver || '').trim(), photo: p.photo, signature: sig, device: navigator.userAgent.slice(0, 60) });
       try { await fetch(this.state.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body }); } catch (e) {}
       let ok = false;
@@ -2057,7 +2411,21 @@ class Component extends DCLogic {
     }));
     const base = {
       tabs, isScan: !auth && st.tab === 'scan', isInv: !auth && st.tab === 'invoices', isSearch: !auth && st.tab === 'search', isRoute: !auth && st.tab === 'route', isTeam: !auth && isAdmin && st.tab === 'team', isSales: !auth && isAdmin && st.tab === 'sales',
-      authNeeded: auth, loginBusy: st.loginBusy, loginErr: st.loginErr, noClient: auth && !st.clientId,
+      authNeeded: auth && !(st.fbMode && st.fbNoAdmin), fbSetup: !!(auth && st.fbMode && st.fbNoAdmin), loginBusy: st.loginBusy,
+      versionText: 'Scan-Check v' + APP_VERSION + ' · ' + APP_BUILD + (st.fbMode ? ' · Firebase' : st.demo ? ' · demo' : ' · Google Sheets'),
+      setupName: st.setupName, setupPin: st.setupPin, onSetupName: e => this.setState({ setupName: e.target.value, loginErr: '' }), onSetupPin: e => this.setState({ setupPin: e.target.value.replace(/\D/g, '').slice(0, 8), loginErr: '' }),
+      submitSetup: () => this.fbSetupAdmin(), setupBtn: st.loginBusy ? 'Creating…' : 'Create admin account',
+      proofView: st.proofView, closeProof: () => this.setState({ proofView: null }),
+      fbOn: st.fbMode, sheetsOn: !st.fbMode, fbOffer: !st.fbMode && (!st.me || st.me.role === 'admin' || st.demo),
+      fbStatus: !st.fbMode ? '' : 'Connected to project ' + st.fbProject + '. ' + (st.fbOffline ? 'Offline right now: changes are saved on this phone and sync when the signal is back.' : 'Live: changes show on every phone right away.') + (st.fbPending ? ' Syncing…' : ''),
+      myPin: st.myPin, onMyPin: e => this.setState({ myPin: e.target.value.replace(/\D/g, '').slice(0, 8) }), changePin: () => this.fbChangePin(),
+      fbMsg: st.fbMsg, fbMsgSet: !!st.fbMsg,
+      canImport: !!(st.fbMode && st.me && st.me.role === 'admin'),
+      imp: { ...st.imp, url: st.imp.url || st.url || '' }, impBtn: st.imp.busy ? 'Copying…' : 'Copy from Google Sheets',
+      onImpUrl: e => this.setState(s => ({ imp: { ...s.imp, url: e.target.value.trim() } })), onImpName: e => this.setState(s => ({ imp: { ...s.imp, name: e.target.value } })), onImpPin: e => this.setState(s => ({ imp: { ...s.imp, pin: e.target.value } })),
+      runImport: () => { if (!st.imp.busy) this.importSheet(); },
+      fbCfgDraft: st.fbCfgDraft, onFbCfg: e => this.setState({ fbCfgDraft: e.target.value, fbMsg: '' }),
+      connectFb: () => { const c = parseFbConfig(st.fbCfgDraft); if (!c) return this.setState({ fbMsg: 'That does not look like a Firebase config. Copy the whole firebaseConfig block.' }); lsSet('scanchk.fbconfig', JSON.stringify(c)); try { location.reload(); } catch (e) {} }, loginErr: st.loginErr, noClient: auth && !st.clientId,
       signedIn: !!(st.me && st.session && !st.demo), meText: st.me ? st.me.name + (isAdmin && !st.demo ? ' · admin' : '') : '',
       pinOpts: st.pinNames.map(n => ({ v: n, label: n })), pinName: st.pinName || st.pinNames[0] || '', pin: st.pin,
       onPinName: e => this.setState({ pinName: e.target.value, loginErr: '' }),
@@ -2067,7 +2435,7 @@ class Component extends DCLogic {
       signOut: () => this.signOut(),
       gkeyDraft: st.gkeyDraft, onGkey: e => this.setState({ gkeyDraft: e.target.value.trim() }),
       gkeyBtn: st.gkeyDraft === st.gkey && st.gkey ? 'Saved ✓' : 'Save',
-      saveGkey: () => { const k = st.gkeyDraft.trim(); lsSet('scanchk.gkey', k); if (!k) { try { location.reload(); } catch (e) {} return; } this.setState({ gkey: k, gmErr: '' }, () => { this.gmLoading = ''; this.loadGoogle(k); }); },
+      saveGkey: () => { const k = st.gkeyDraft.trim(); lsSet('scanchk.gkey', k); this.saveShared('gkey', k); if (!k) { try { location.reload(); } catch (e) {} return; } this.setState({ gkey: k, gmErr: '' }, () => { this.gmLoading = ''; this.loadGoogle(k); }); },
       gmStatus: st.gmErr ? st.gmErr : st.gm ? '✓ Using Google Maps for the map and address search' : st.gkey ? 'Connecting to Google Maps…' : 'Using OpenStreetMap (free)',
       gmColor: st.gmErr ? C.red : st.gm ? C.green : '#6b675e',
       navAppText: st.navApp ? NAV_APPS[st.navApp] + ' (always)' : 'Ask every time',
@@ -2089,7 +2457,7 @@ class Component extends DCLogic {
       copyLink: () => { const l = location.origin + location.pathname + '?api=' + encodeURIComponent(st.url) + (st.depot ? '&depot=' + encodeURIComponent(st.depot) : '') + (st.gkey ? '&gkey=' + encodeURIComponent(st.gkey) : ''); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { this.setState({ linkCopied: true }); setTimeout(() => this.setState({ linkCopied: false }), 2500); }, () => {}); },
       days: (() => { const dd = this.days(); return [['today', 'Today ' + dd.tl], ['tomorrow', 'Tomorrow ' + dd.ml], ['both', 'Both']].map(([k, l]) => { const on = st.day === k; return { label: l, pick: () => { localStorage.setItem('scanchk.day', k); this.setState({ day: k, routeSel: null, locked: null, scans: [], flash: null }); }, bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }); })(),
       demo: st.demo, showSettings: st.settings, urlDraft: st.urlDraft, errText: st.err,
-      sourceLabel: st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
+      sourceLabel: st.fbMode ? (st.loading ? 'Connecting to Firebase…' : d && st.me ? st.me.name + ' · ' + (st.fbOffline ? 'offline, will sync' : 'live') + ' · ' + d.invoices.size + ' invoices' : 'Firebase · sign in') : st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
       reload: () => this.load(),
       toggleSettings: () => this.setState({ settings: !st.settings }),
       onUrlDraft: e => this.setState({ urlDraft: e.target.value }),
@@ -2311,7 +2679,7 @@ class Component extends DCLogic {
           wxText, calcText, needText, needBg, needFg,
           depotDraft: st.depotDraft, onDepot: e => this.setState({ depotDraft: e.target.value }),
           depotBtn: st.depotDraft.trim() === st.depot ? (st.depot ? 'Saved ✓' : 'Save') : 'Save',
-          saveDepot: () => { const v = st.depotDraft.trim(); lsSet('scanchk.depot', v); this._wxKey = ''; this.setState({ depot: v }, () => { if (v) this.geocodeOne(v).then(() => { this._wxKey = ''; this.fetchWx(); }); }); },
+          saveDepot: () => { const v = st.depotDraft.trim(); lsSet('scanchk.depot', v); this.saveShared('depot', v); this._wxKey = ''; this.setState({ depot: v }, () => { if (v) this.geocodeOne(v).then(() => { this._wxKey = ''; this.fetchWx(); }); }); },
           hasDepot: !!st.depot,
           whChNav: 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + WH_CHARGER.lat + ',' + WH_CHARGER.lon };
       })(),
@@ -2361,11 +2729,18 @@ class Component extends DCLogic {
         const groups = drivers.map((x, i) => group(x.name, x.email, dayInv.filter(o => owner(o) === x), i, false));
         const un = dayInv.filter(o => !owner(o));
         groups.push(group('Unassigned', '', un, 0, true));
-        return { groups, noDrivers: !drivers.length,
+        const accts = st.fbMode ? ((this.fbData || {}).drivers || []).slice().sort((a, b) => (a.Active === false) - (b.Active === false) || String(a.Name).localeCompare(String(b.Name))) : [];
+        return { groups, noDrivers: !drivers.length && !st.fbMode,
+          fbTeam: st.fbMode, fbMsg: st.fbMsg,
+          accounts: accts.map(a => ({ label: a.Name + ' · ' + (a.Role === 'admin' ? 'admin' : 'driver') + (a.Active === false ? ' · off' : ''), color: a.Active === false ? '#9a958a' : '#1c1b18',
+            canToggle: !(st.me && a.__id === st.me.uid), toggleLabel: a.Active === false ? 'Turn on' : 'Turn off', toggle: () => this.fbSetActive(a, a.Active === false) })),
+          newName: st.fbNew.name, newPin: st.fbNew.pin, newRole: st.fbNew.role,
+          onNewName: e => this.setState(s => ({ fbNew: { ...s.fbNew, name: e.target.value }, fbMsg: '' })), onNewPin: e => this.setState(s => ({ fbNew: { ...s.fbNew, pin: e.target.value.replace(/\D/g, '').slice(0, 8) }, fbMsg: '' })),
+          onNewRole: e => this.setState(s => ({ fbNew: { ...s.fbNew, role: e.target.value } })), addDriver: () => this.fbAddDriver(),
           orderNote: canOrder ? 'Use ▲ ▼ to change a driver\'s stop order, or tap Auto-order to sort their stops into a short driving route. Stops are numbered 1, 2, 3… for each driver and saved to the ASSIGNMENTS tab. Drivers see the new order when they tap Refresh.' : 'Pick Today or Tomorrow at the top to change stop order.',
           depotDraft: st.depotDraft, onDepot: e => this.setState({ depotDraft: e.target.value }),
           depotBtn: st.depotDraft.trim() === st.depot ? (st.depot ? 'Saved ✓' : 'Save') : 'Save',
-          saveDepot: () => { const v = st.depotDraft.trim(); try { localStorage.setItem('scanchk.depot', v); } catch (e) {} this.setState({ depot: v }); },
+          saveDepot: () => { const v = st.depotDraft.trim(); try { localStorage.setItem('scanchk.depot', v); } catch (e) {} this.saveShared('depot', v); this.setState({ depot: v }); },
           locNote: (d.locations || []).length ? 'Driver locations update about every 2 minutes while their app is open.' : 'No driver locations yet. They appear when a driver opens the app and allows location.' };
       })(),
       sales: (() => {

@@ -1,0 +1,33 @@
+rules_version = '2';
+// Scan-Check Firestore rules. Paste into Firebase console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function acct() { return get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data; }
+    function member() { return signedIn() && exists(/databases/$(database)/documents/drivers/$(request.auth.uid)) && acct().Active != false; }
+    function admin() { return member() && acct().Role == 'admin'; }
+    function firstSetup() { return signedIn() && !exists(/databases/$(database)/documents/public/roster); }
+
+    // Names shown on the sign-in screen (names only, no PINs).
+    match /public/roster {
+      allow read: if true;
+      allow write: if admin() || firstSetup();
+    }
+    // Team accounts. The very first account (admin) may create itself; after that only admins manage accounts.
+    match /drivers/{uid} {
+      allow read: if member() || (signedIn() && request.auth.uid == uid);
+      allow create: if admin() || (firstSetup() && request.auth.uid == uid && request.resource.data.Role == 'admin');
+      allow update, delete: if admin();
+    }
+    // Shared settings (warehouse address, Google Maps key).
+    match /settings/{doc} {
+      allow read: if member();
+      allow write: if admin();
+    }
+    // Day-to-day data: any active team member.
+    match /{col}/{id} {
+      allow read, write: if member() && col in ['invoices', 'items', 'upcs', 'servicesold', 'services', 'chargers',
+        'deliveries', 'proofs', 'comebacks', 'log', 'locations'];
+    }
+  }
+}
