@@ -116,6 +116,10 @@ input{font:inherit}
               </div>
               <button onClick="{{ runImport }}" style="height:44px;padding:0 16px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 14px 'IBM Plex Sans';cursor:pointer">{{ impBtn }}</button>
               <sc-if value="{{ imp.msg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#33312b;line-height:1.45">{{ imp.msg }}</div></sc-if>
+              <div style="display:flex;align-items:center;gap:8px;padding-top:6px;border-top:1px solid #eeebe4">
+                <div style="flex:1;min-width:0;font-size:12px;color:#33312b;line-height:1.4">{{ syncText }}</div>
+                <button onClick="{{ toggleSync }}" style="flex:none;height:34px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;border-radius:8px;font:500 12px 'IBM Plex Sans';cursor:pointer">{{ syncBtn }}</button>
+              </div>
             </div>
           </sc-if>
         </div>
@@ -1222,7 +1226,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.0.4', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.1.0', APP_BUILD = '2026-11-13';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = {
@@ -1281,6 +1285,7 @@ class Component extends DCLogic {
     routeInfo: null, chargers: null, myLoc: null, startMode: 'auto', locErr: '',
     range: localStorage.getItem('scanchk.range') || '',
     fbMode: !!fbCfg(), fbNoAdmin: false, fbReady: false, fbProject: (fbCfg() || {}).projectId || '', fbCfgDraft: '', fbNew: { name: '', pin: '', role: 'driver' }, fbMsg: '', imp: { url: '', name: '', pin: '', busy: false, msg: '' }, myPin: '', proofView: null, setupName: '', setupPin: '',
+    syncOn: lsGet('scanchk.sync', '') === '1', syncMsg: '', syncAt: 0,
     navApp: lsGet('scanchk.navApp', ''), navPick: null, navRemember: false, battPct: lsGet('scanchk.batt', ''), battKwh: lsGet('scanchk.kwh', '68'), eff: lsGet('scanchk.eff', '2.6'), load: lsGet('scanchk.load', 'normal'), wx: null,
     geo: (() => { try { const g = JSON.parse(localStorage.getItem('scanchk.geo') || '{}'), now = Date.now(); Object.keys(g).forEach(k => { if (!g[k] || g[k] === 'x' || (g[k].src === 'g' && now - (g[k].t || 0) > 29 * 864e5)) delete g[k]; }); return g; } catch (e) { return {}; } })(),
     gkey: lsGet('scanchk.gkey', ''), gkeyDraft: lsGet('scanchk.gkey', ''), gm: false, gmErr: ''
@@ -1323,6 +1328,7 @@ class Component extends DCLogic {
     if (this.state.gkey) this.loadGoogle(this.state.gkey);
     this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
     document.addEventListener('visibilitychange', this.onVis);
+    this.syncT = setInterval(() => this.autoSync(), 5 * 60000);
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading && !this.state.fbMode) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
@@ -1333,7 +1339,7 @@ class Component extends DCLogic {
     } catch (e) {}
   }
   componentDidUpdate() { this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
-  componentWillUnmount() { clearInterval(this.teamT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
+  componentWillUnmount() { clearInterval(this.teamT); clearInterval(this.syncT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
 
   days() {
     const k = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1764,7 +1770,7 @@ class Component extends DCLogic {
         if (!dd.exists || dd.data().Active === false) { await this.fbAuth.signOut(); this.setState({ loginErr: 'This account is not active. Ask your admin.' }); return; }
         const me = { name: dd.data().Name, role: dd.data().Role === 'admin' ? 'admin' : 'driver', uid: u.uid };
         lsSet('scanchk.me', JSON.stringify(me));
-        this.setState({ me, authNeeded: false, session: 'fb', loading: true, fbReady: true, loginErr: '' }, () => { this.fbListen(); this.startLoc(); });
+        this.setState({ me, authNeeded: false, session: 'fb', loading: true, fbReady: true, loginErr: '' }, () => { this.fbListen(); this.startLoc(); setTimeout(() => this.autoSync(), 8000); });
       } catch (e) { this.setState({ loading: false, err: 'Could not load your account: ' + fbErr(e) }); }
     });
   }
@@ -1923,8 +1929,20 @@ class Component extends DCLogic {
     catch (e) { this.setState({ fbMsg: fbErr(e) }); }
   }
   saveShared(field, value) { if (this.state.fbMode && this.fs && this.state.me && this.state.me.role === 'admin') this.fs.doc('settings/app').set({ [field]: value }, { merge: true }).catch(e => this.setState({ err: 'Setting not shared: ' + fbErr(e) })); }
-  async importSheet() {
-    const im = this.state.imp, url = (im.url || this.state.url || '').trim(), setMsg = (msg, busy) => this.setState(s => ({ imp: { ...s.imp, msg, busy: busy !== false } }));
+  autoSync() {
+    const st = this.state;
+    if (!st.fbMode || !st.syncOn || !st.me || st.me.role !== 'admin' || !this.fs || !this.fbData || document.visibilityState !== 'visible') return;
+    if (!lsGet('scanchk.impcfg', '')) return;
+    this.importSheet(true);
+  }
+  async importSheet(quiet) {
+    if (this.importing) return; this.importing = true;
+    try { return await this.importSheetRun(quiet); } finally { this.importing = false; }
+  }
+  async importSheetRun(quiet) {
+    const saved = (() => { try { return JSON.parse(lsGet('scanchk.impcfg', '') || 'null'); } catch (e) { return null; } })();
+    const im = quiet && saved ? { ...this.state.imp, ...saved } : this.state.imp, url = (im.url || this.state.url || '').trim();
+    const setMsg = (msg, busy) => { if (quiet) { if (busy === false) this.setState({ syncMsg: msg, syncAt: Date.now() }); return; } this.setState(s => ({ imp: { ...s.imp, msg, busy: busy !== false } })); };
     if (!/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec/.test(url)) return setMsg('Paste your Google Script link (ends in /exec).', false);
     try {
       setMsg('Connecting to the sheet…');
@@ -1940,6 +1958,8 @@ class Component extends DCLogic {
       const raw = await this.sheetCall(url, {}, session);
       if (!raw || raw.ok === false || !raw.invoices) return setMsg('Could not read the sheet: ' + ((raw && raw.error) || 'no data'), false);
       const fs = this.fs, F = this.fbData || {}, ops = [];
+      const idx = {}; Object.keys(F).forEach(c => { idx[c] = {}; (F[c] || []).forEach(r => idx[c][r.__id] = r); });
+      const same = (col, id, row) => { const ex = idx[col] && idx[col][id]; if (!ex) return false; return Object.keys(row).every(k => String(row[k] == null ? '' : row[k]) === String(ex[k] == null ? '' : ex[k])); };
       const existingInv = {}; (F.invoices || []).forEach(r => existingInv[r.__id] = r);
       (raw.invoices || []).forEach(r => { const id = invId(r); if (!id) return; const ex = existingInv[fbId(id)], row = { ...r, Invoice: id };
         if (ex) { if (String(ex.Driver || '').trim()) delete row.Driver; const sk = Object.keys(row).find(k => /^\s*stop/i.test(k)); if (sk && String(ex[sk] || ex.Stop || '').trim()) delete row[sk]; }
@@ -1953,14 +1973,20 @@ class Component extends DCLogic {
       (raw.comebacks || []).forEach(r => { const id = pick(r, [/come.?back.?id|^cb.?id/i]); if (id) ops.push(['comebacks', fbId(id), r, true]); });
       (raw.deliveries || []).forEach(r => ops.push(['deliveries', dup('d|' + invId(r) + '|' + pick(r, [/time|date/i])), r, false]));
       (raw.log || []).forEach(r => { const ts = pick(r, [/time/i]), t = Date.parse(ts), y = isNaN(t) ? '' : toYmd(new Date(t).toISOString()); ops.push(['log', dup('l|' + invId(r) + '|' + ts + '|' + pick(r, [/upc/i]) + '|' + pick(r, [/result/i])), { ...r, Day: y || toYmd(ts) || todayYmd() }, false]); });
+      const total = ops.length, todo = ops.filter(([col, id, row]) => !same(col, id, row));
+      ops.length = 0; todo.forEach(o => ops.push(o));
+      const newInv = ops.filter(o => o[0] === 'invoices' && !(idx.invoices || {})[o[1]]).length;
       for (let i = 0; i < ops.length; i += 400) {
         setMsg('Copying to Firebase… ' + Math.min(ops.length, i + 400) + ' of ' + ops.length);
         const b = fs.batch(); ops.slice(i, i + 400).forEach(([col, id, row, merge]) => b.set(fs.collection(col).doc(id), row, merge ? { merge: true } : {}));
         await b.commit();
       }
       const missing = (raw.drivers || []).map(d => d.Name).filter(n => n && !(this.state.pinNames || []).some(x => x.toLowerCase() === String(n).toLowerCase()));
-      setMsg('✓ Copied ' + (raw.invoices || []).length + ' invoices and ' + ops.length + ' rows in total.' + (missing.length ? ' Add these drivers in the Team tab with a PIN: ' + missing.join(', ') + '.' : ''), false);
-    } catch (e) { setMsg('Import stopped: ' + fbErr(e) + '. You can run it again; nothing gets duplicated.', false); }
+      lsSet('scanchk.impcfg', JSON.stringify({ url, name: im.name || '', pin: im.pin || '' }));
+      if (quiet) { setMsg(ops.length ? '✓ ' + (newInv ? newInv + ' new invoice' + (newInv === 1 ? '' : 's') + ', ' : '') + ops.length + ' change' + (ops.length === 1 ? '' : 's') + ' copied' : 'Up to date', false); if (newInv) this.setFlash('ok', newInv + ' new invoice' + (newInv === 1 ? '' : 's') + ' from the sheet', 'Synced automatically'); return; }
+      setMsg('✓ Checked ' + (raw.invoices || []).length + ' invoices: ' + (ops.length ? ops.length + ' new or changed rows copied' + (newInv ? ' (' + newInv + ' new invoices)' : '') : 'everything was already up to date') + '. Auto-sync is now on for this phone.' + (missing.length ? ' Add these drivers in the Team tab with a PIN: ' + missing.join(', ') + '.' : ''), false);
+      this.setState({ syncOn: true }); lsSet('scanchk.sync', '1');
+    } catch (e) { setMsg((quiet ? 'Auto-sync failed: ' : 'Import stopped: ') + fbErr(e) + (quiet ? '' : '. You can run it again; nothing gets duplicated.'), false); }
   }
   openCb(id) {
     const o = this.state.data.invoices.get(id); if (!o) return;
@@ -2507,6 +2533,9 @@ class Component extends DCLogic {
       imp: { ...st.imp, url: st.imp.url || st.url || '' }, impBtn: st.imp.busy ? 'Copying…' : 'Copy from Google Sheets',
       onImpUrl: e => this.setState(s => ({ imp: { ...s.imp, url: e.target.value.trim() } })), onImpName: e => this.setState(s => ({ imp: { ...s.imp, name: e.target.value } })), onImpPin: e => this.setState(s => ({ imp: { ...s.imp, pin: e.target.value } })),
       runImport: () => { if (!st.imp.busy) this.importSheet(); },
+      syncText: !st.syncOn ? 'Auto-sync is off. New invoices in the sheet are copied only when you tap the button.' : !lsGet('scanchk.impcfg', '') ? 'Auto-sync turns on after the first successful copy.' : 'Auto-sync on: every 5 minutes while this app is open' + (st.syncAt ? ' · last checked ' + new Date(st.syncAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + (st.syncMsg ? ' · ' + st.syncMsg : '') : '') + '.',
+      syncBtn: st.syncOn ? 'Turn off' : 'Turn on',
+      toggleSync: () => { const on = !st.syncOn; lsSet('scanchk.sync', on ? '1' : ''); this.setState({ syncOn: on }, () => { if (on) this.autoSync(); }); },
       fbCfgDraft: st.fbCfgDraft, onFbCfg: e => this.setState({ fbCfgDraft: e.target.value, fbMsg: '' }),
       connectFb: () => { const c = parseFbConfig(st.fbCfgDraft); if (!c) return this.setState({ fbMsg: 'That does not look like a Firebase config. Copy the whole firebaseConfig block.' }); lsSet('scanchk.fbconfig', JSON.stringify(c)); try { location.reload(); } catch (e) {} }, loginErr: st.loginErr, noClient: auth && !st.clientId,
       signedIn: !!(st.me && st.session && !st.demo), meText: st.me ? st.me.name + (isAdmin && !st.demo ? ' · admin' : '') : '',
