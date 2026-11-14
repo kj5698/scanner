@@ -783,6 +783,20 @@ input{font:inherit}
               <button onClick="{{ routeSel.deliver }}" style="height:50px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">Deliver</button>
               <button onClick="{{ routeSel.open }}" style="height:50px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 14px 'IBM Plex Sans';cursor:pointer">Invoice</button>
             </div>
+            <sc-if value="{{ routeSel.showFix }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:{{ routeSel.fixBg }};border:1px solid {{ routeSel.fixBorder }}">
+                <div style="font-size:13px;font-weight:600;color:{{ routeSel.fixFg }}">{{ routeSel.fixTitle }}</div>
+                <div style="display:flex;gap:6px">
+                  <input value="{{ routeSel.fixText }}" onChange="{{ routeSel.onFixText }}" placeholder="Address as you'd type it in Google Maps" style="flex:1;min-width:0;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:14px;color:#1c1b18">
+                  <button onClick="{{ routeSel.fixSearch }}" style="flex:none;height:40px;padding:0 12px;border:none;border-radius:8px;background:#1c1b18;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer">Find</button>
+                </div>
+                <button onClick="{{ routeSel.fixHere }}" style="height:40px;border:1px solid #1c1b18;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer">I'm at the door: use my location</button>
+                <sc-if value="{{ routeSel.fixMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#33312b">{{ routeSel.fixMsg }}</div></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ routeSel.canMove }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ routeSel.toggleFix }}" style="align-self:flex-start;border:none;background:none;padding:2px 0;font:500 12px 'IBM Plex Sans';color:#55524a;text-decoration:underline;cursor:pointer">{{ routeSel.fixToggleLabel }}</button>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -793,6 +807,7 @@ input{font:inherit}
               <div style="flex:1;min-width:0">
                 <div style="font-size:14px;font-weight:600">{{ rs.customer }}</div>
                 <div style="font-size:12px;color:#55524a;line-height:1.35">{{ rs.address }}</div>
+                <sc-if value="{{ rs.missing }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:oklch(0.5 0.17 28);font-weight:600;margin-top:2px">Not found on the map · tap to fix</div></sc-if>
               </div>
               <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
                 <div style="padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:{{ rs.pillBg }};color:{{ rs.pillFg }}">{{ rs.statusLabel }}</div>
@@ -1152,7 +1167,7 @@ const MUTANT_URL = 'https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/dist
 const OSM_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function simplerAddrs(a) {
-  const out = [], noUnit = a.replace(/\b(apt|apartment|unit|suite|ste|fl|floor|rm|room|bldg|building|dept)\.?\s*#?\s*[\w-]+/ig, '').replace(/#\s*[\w-]+/g, '').replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ').trim();
+  const out = [], noUnit = a.replace(/\b(apt|apartment|unit|suite|ste|floor|rm|room|bldg|building|dept)\.?\s*#?\s*[\w-]+(?=\s*,|\s*$)/ig, '').replace(/#\s*[\w-]+/g, '').replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ').trim();
   if (noUnit && noUnit !== a) out.push(noUnit);
   const zips = a.match(/\b\d{5}\b/g), street = noUnit.split(',')[0].trim();
   if (zips && street && street !== noUnit) out.push(street + ', ' + zips[zips.length - 1]);
@@ -1163,14 +1178,26 @@ async function nominatim(q) {
   return j && j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : null;
 }
 // Google first (if a key is set), then OpenStreetMap with simpler versions of the address. Returns { res, waitMs } (res null = not found, undefined = network error).
-async function geocodeAddr(a) {
-  const g = window.google && window.google.maps;
-  if (g && g.Geocoder && window.__gmOk) {
-    try {
-      const r = await new g.Geocoder().geocode({ address: a, componentRestrictions: { country: 'US' } });
-      const loc = r && r.results && r.results[0] && r.results[0].geometry.location;
-      if (loc) return { res: { lat: loc.lat(), lon: loc.lng(), src: 'g', t: Date.now() }, waitMs: 60 };
-    } catch (e) { if (!/ZERO_RESULTS/.test(String(e && (e.code || e.message)))) { /* fall through to OpenStreetMap */ } }
+const cleanAddr = a => String(a || '').replace(/[\r\n]+/g, ', ').replace(/\bstop\s*#?\s*\d+\b/ig, '').replace(/\s{2,}/g, ' ').replace(/(,\s*)+/g, ', ').replace(/^[,\s]+|[,\s]+$/g, '');
+async function googleGeo(q) {
+  const g = window.google.maps, opts = { address: q, componentRestrictions: { country: 'US' } };
+  if (window.__gmBias) opts.bounds = window.__gmBias;
+  try {
+    const r = await new g.Geocoder().geocode(opts);
+    const loc = r && r.results && r.results[0] && r.results[0].geometry.location;
+    return loc ? { lat: loc.lat(), lon: loc.lng(), src: 'g', t: Date.now() } : null;
+  } catch (e) {
+    const c = String((e && (e.code || e.message)) || e);
+    if (/REQUEST_DENIED|not authorized|ApiNotActivated|API project is not authorized/i.test(c)) { window.__gmGeoDenied = true; if (window.__gmGeoDeniedCb) window.__gmGeoDeniedCb(); }
+    return null;
+  }
+}
+async function geocodeAddr(a0) {
+  const a = cleanAddr(a0), g = window.google && window.google.maps;
+  if (g && g.Geocoder && window.__gmOk && !window.__gmGeoDenied) {
+    let res = await googleGeo(a);
+    for (const alt of res || window.__gmGeoDenied ? [] : simplerAddrs(a)) { res = await googleGeo(alt); if (res) break; }
+    if (res) return { res, waitMs: 60 };
   }
   try {
     let res = await nominatim(a);
@@ -1179,7 +1206,7 @@ async function geocodeAddr(a) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.0.2', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.0.3', APP_BUILD = '2026-11-13';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = {
@@ -1324,8 +1351,9 @@ class Component extends DCLogic {
     this.gmLoading = key;
     window.gm_authFailure = () => { window.__gmOk = false; this.setState({ gm: false, gmErr: 'Google refused this key. Check that Maps JavaScript API and Geocoding API are enabled, billing is on, and the key allows this website.' }); };
     const addScript = (src, id) => new Promise((ok, bad) => { const old = document.getElementById(id); if (old) old.remove(); const sc = document.createElement('script'); sc.id = id; sc.src = src; sc.async = true; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc); });
+    window.__gmGeoDeniedCb = () => this.setState({ gmGeoDenied: true });
     window.__scanchkGm = () => {
-      window.__gmOk = true;
+      window.__gmOk = true; window.__gmGeoDenied = false;
       addScript(MUTANT_URL, 'gm-mutant').then(() => {
         const geo = { ...this.state.geo }; Object.keys(geo).forEach(k => { if (geo[k] === 'x') delete geo[k]; });
         this.setState({ gm: true, gmErr: '', geo });
@@ -1380,6 +1408,7 @@ class Component extends DCLogic {
 
   routeEnds() {
     const st = this.state, g = st.depot && st.geo[st.depot], dg = g && g !== 'x' ? g : null;
+    if (dg && window.google && window.google.maps && window.google.maps.LatLngBounds && !window.__gmBias) { try { window.__gmBias = new window.google.maps.LatLngBounds({ lat: dg.lat - 1, lng: dg.lon - 1.2 }, { lat: dg.lat + 1, lng: dg.lon + 1.2 }); } catch (e) {} }
     const anyDone = this.routeList(true).some(s => s.v.st === 'Complete');
     let mode = st.startMode === 'auto' ? (anyDone && st.myLoc ? 'me' : dg ? 'warehouse' : st.myLoc ? 'me' : 'first') : st.startMode;
     if (mode === 'me' && !st.myLoc) mode = dg ? 'warehouse' : 'first';
@@ -1543,6 +1572,7 @@ class Component extends DCLogic {
       if (im) o.ymd = im[1] + '-' + p2(im[2]) + '-' + p2(im[3]);
       else if (dm) o.ymd = (dm[3].length === 2 ? '20' + dm[3] : dm[3]) + '-' + p2(dm[1]) + '-' + p2(dm[2]);
       else { const t = Date.parse(o.date); o.ymd = isNaN(t) ? '' : (d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()))(new Date(t)); } o.customer = pick(r, [/cust/i, /client/i, /name/i]); o.driver = pick(r, [/driver/i]);
+      { const la = parseFloat(pick(r, [/^lat(itude)?$/i])), lo = parseFloat(pick(r, [/^(lng|lon|long|longitude)$/i])); if (!isNaN(la) && !isNaN(lo)) { o.pin = { lat: la, lon: lo, src: 'pin' }; } }
       o.paid = pick(r, [/paid|payment|pay\s*status/i]); o.total = pick(r, [/total|grand|amount/i]);
       const a = pick(r, [/addr/i]).replace(/[,\s]+$/, '');
       const sm = a.match(/^(.*?(?:\D|\b\d{5}))[\s,#\-]+(?:stop\s*#?\s*)?(\d{1,2})$/i);
@@ -1591,6 +1621,8 @@ class Component extends DCLogic {
       items: pick(r, [/^items?$/i, /piece|model/i]), services: pick(r, [/^serv/i]), reason: pick(r, [/reason/i]), note: pick(r, [/note/i]) }));
     const locations = (raw.locations || []).map(r => ({ name: pick(r, [/name/i]), lat: parseFloat(pick(r, [/^lat/i])), lon: parseFloat(pick(r, [/^(lng|lon)/i])), updated: pick(r, [/updat|time/i]) })).filter(l => !isNaN(l.lat) && !isNaN(l.lon));
     if (!saved.some(c => c.lat != null && hav([c.lat, c.lon], [WH_CHARGER.lat, WH_CHARGER.lon]) < 0.2)) saved.push({ ...WH_CHARGER, builtin: true });
+    (raw.comebacks || []).forEach(r => { const id = pick(r, [/come.?back.?id|^cb.?id/i]), la = parseFloat(pick(r, [/^lat(itude)?$/i])), lo = parseFloat(pick(r, [/^(lng|lon|long|longitude)$/i])); const o = id && inv.get(id); if (o && !isNaN(la) && !isNaN(lo)) o.pin = { lat: la, lon: lo, src: 'pin' }; });
+    inv.forEach(o => { if (!o.pin && o.comeback && inv.get(o.parent) && inv.get(o.parent).pin && o.address === inv.get(o.parent).address) o.pin = inv.get(o.parent).pin; });
     return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, catCodes: Array.from(new Set(catCodes)).sort() };
   }
 
@@ -1612,7 +1644,8 @@ class Component extends DCLogic {
       const j = await this.call({});
       if (j && j.ok === false) { if (j.auth) return; throw new Error(j.error); }
       if (j.me) localStorage.setItem('scanchk.me', JSON.stringify(j.me));
-      this.setState({ data: this.parse(j), loading: false, authNeeded: false, me: j.me || (this.state.session ? this.state.me : null) }, () => this.startLoc());
+      const pd = this.parse(j);
+      this.setState({ data: pd, geo: this.pinsGeo(pd, this.state.geo), loading: false, authNeeded: false, me: j.me || (this.state.session ? this.state.me : null) }, () => this.startLoc());
     } catch (e) {
       this.setState({ loading: false, err: 'Could not load the sheets (' + e.message + '). Open your link in a new browser tab: you should see text starting with {"invoices" or {"ok". If you see a Google sign-in page, set "Who has access" to Anyone and deploy a New version.' });
     }
@@ -1754,7 +1787,8 @@ class Component extends DCLogic {
         ['items', 'servicesold', 'log', 'deliveries'].forEach(c => raw[c] = raw[c].filter(keep));
         raw.drivers = []; raw.locations = [];
       }
-      this.setState({ data: this.parse(raw), loading: false, err: this.state.err && /Live data error/.test(this.state.err) ? '' : this.state.err });
+      const data = this.parse(raw);
+      this.setState(s => ({ data, geo: this.pinsGeo(data, s.geo), loading: false, err: s.err && /Live data error/.test(s.err) ? '' : s.err }));
     };
     if (now) go(); else this.fbT = setTimeout(go, 120);
   }
@@ -1943,6 +1977,32 @@ class Component extends DCLogic {
       id = addComeback(inv, { ...row, id });
       return { cbForm: null, data: { ...s.data, invoices: inv } };
     }, () => { this.tone('done'); this.setFlash('done', 'Come-back ' + id + ' created', 'For ' + row.date + ' · no charge ($0)' + (this.state.demo ? ' · demo only' : ' · saved to COMEBACKS tab')); });
+  }
+  pinsGeo(d, geo) {
+    const out = { ...geo }; let ch = false;
+    if (d && d.invoices) d.invoices.forEach(o => { if (o.pin && o.address) { const c = out[o.address]; if (!c || c === 'x' || c.lat !== o.pin.lat || c.lon !== o.pin.lon) { out[o.address] = o.pin; ch = true; } } });
+    return ch ? out : geo;
+  }
+  async fixLocation(id, how, text) {
+    const d = this.state.data, o = d && d.invoices.get(id); if (!o) return;
+    const setMsg = m => this.setState(s => ({ fixMsg: { ...(s.fixMsg || {}), [id]: m } }));
+    let pt = null;
+    if (how === 'here') {
+      if (!navigator.geolocation) return setMsg('Location is not available on this phone.');
+      setMsg('Getting your location…');
+      pt = await new Promise(ok => navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lon: p.coords.longitude }), () => ok(null), { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }));
+      if (!pt) return setMsg('Could not get your location. Allow location and try again.');
+    } else {
+      const q = String(text || '').trim(); if (!q) return setMsg('Type the address the way you would in Google Maps.');
+      setMsg('Searching…');
+      const { res } = await geocodeAddr(q);
+      if (!res) return setMsg('Still not found. Try adding the town and ZIP, or stand at the door and tap "Use my location".');
+      pt = { lat: res.lat, lon: res.lon };
+    }
+    const pin = { lat: +pt.lat.toFixed(6), lon: +pt.lon.toFixed(6), src: 'pin' };
+    const geo = { ...this.state.geo, [o.address]: pin }; saveGeo(geo);
+    this.setState({ geo, fixOpen: null }); setMsg('✓ Location saved' + (this.state.fbMode ? ' for every phone.' : ' on this phone.'));
+    if (this.state.fbMode && this.fs) { this.fbInvRef(id).update({ Lat: pin.lat, Lon: pin.lon, ...(how === 'text' ? { MapAddress: String(text).trim() } : {}) }).catch(e => setMsg('Saved here, but not shared: ' + fbErr(e))); }
   }
   setStopsLocal(rows) {
     this.setState(s => { const inv = new Map(s.data.invoices);
@@ -2443,8 +2503,8 @@ class Component extends DCLogic {
       gkeyDraft: st.gkeyDraft, onGkey: e => this.setState({ gkeyDraft: e.target.value.trim() }),
       gkeyBtn: st.gkeyDraft === st.gkey && st.gkey ? 'Saved ✓' : 'Save',
       saveGkey: () => { const k = st.gkeyDraft.trim(); lsSet('scanchk.gkey', k); this.saveShared('gkey', k); if (!k) { try { location.reload(); } catch (e) {} return; } this.setState({ gkey: k, gmErr: '' }, () => { this.gmLoading = ''; this.loadGoogle(k); }); },
-      gmStatus: st.gmErr ? st.gmErr : st.gm ? '✓ Using Google Maps for the map and address search' : st.gkey ? 'Connecting to Google Maps…' : 'Using OpenStreetMap (free)',
-      gmColor: st.gmErr ? C.red : st.gm ? C.green : '#6b675e',
+      gmStatus: st.gmErr ? st.gmErr : st.gmGeoDenied ? 'The Google map works, but Google address search is blocked for this key. In Google Cloud → APIs & Services → Library, enable "Geocoding API", and make sure the key\'s API restrictions allow it. Until then addresses use OpenStreetMap.' : st.gm ? '✓ Using Google Maps for the map and address search' : st.gkey ? 'Connecting to Google Maps…' : 'Using OpenStreetMap (free)',
+      gmColor: st.gmErr || st.gmGeoDenied ? C.red : st.gm ? C.green : '#6b675e',
       navAppText: st.navApp ? NAV_APPS[st.navApp] + ' (always)' : 'Ask every time',
       navAppSet: !!st.navApp, resetNavApp: () => { lsSet('scanchk.navApp', ''); this.setState({ navApp: '' }); },
       navPick: st.navPick ? (() => {
@@ -2570,9 +2630,10 @@ class Component extends DCLogic {
     const rl = this.routeList(), geo = st.geo, doneN = this.routeList(true).filter(s => s.v.st === 'Complete').length;
     const located = rl.filter(s => geo[s.o.address] && geo[s.o.address] !== 'x').length;
     const pendingGeo = rl.filter(s => !(s.o.address in geo)).length, missing = rl.length - located - pendingGeo;
+    const missingOf = o => geo[o.address] === 'x';
     const routeStops = rl.map(s => {
       const sel = st.routeSel === s.o.id;
-      return { num: s.num, customer: s.v.customer, address: s.o.address, statusLabel: s.v.statusLabel, pillBg: s.v.pillBg, pillFg: s.v.pillFg,
+      return { missing: missingOf(s.o), num: s.num, customer: s.v.customer, address: s.o.address, statusLabel: s.v.statusLabel, pillBg: s.v.pillBg, pillFg: s.v.pillFg,
         dot: sel ? 'oklch(0.5 0.14 255)' : s.v.st === 'Complete' ? C.green : s.v.st === 'Ready' ? 'oklch(0.5 0.14 255)' : s.v.st === 'Partial' ? C.amber : C.ink,
         bg: sel ? 'oklch(0.95 0.03 255)' : '#fff', pick: () => this.setState({ routeSel: s.o.id }) };
     });
@@ -2607,7 +2668,13 @@ class Component extends DCLogic {
     const osmTxt = !chs ? 'searching map…' : chs.retrying ? 'map busy, retrying…' : chs.error ? 'map service busy' : chs.list.length + ' NACS from the map within 3 mi';
     const chargeStatus = !ri || !ri.geom ? 'Shown once the route miles are calculated.' : savedTxt + ' · ' + osmTxt;
     const rs = rl.find(s => s.o.id === st.routeSel);
-    const routeSel = rs ? { stopLabel: 'STOP ' + rs.num, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: rs.v.progress || '0/0', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null;
+    const fixFor = o => { const miss = missingOf(o), open = miss || st.fixOpen === o.id, txt = (st.fixText || {})[o.id];
+      return { showFix: open, canMove: !miss, fixToggleLabel: st.fixOpen === o.id ? 'Close' : 'Wrong spot on the map? Fix location',
+        fixTitle: miss ? 'This address was not found on the map' : 'Fix where this stop is on the map', fixBg: miss ? 'oklch(0.96 0.03 27)' : '#fbfaf7', fixBorder: miss ? 'oklch(0.85 0.08 27)' : '#e2dfd7', fixFg: miss ? 'oklch(0.42 0.15 27)' : '#1c1b18',
+        fixText: txt != null ? txt : cleanAddr(o.address), onFixText: e => { const v = e.target.value; this.setState(s2 => ({ fixText: { ...(s2.fixText || {}), [o.id]: v } })); },
+        fixSearch: () => this.fixLocation(o.id, 'text', txt != null ? txt : cleanAddr(o.address)), fixHere: () => this.fixLocation(o.id, 'here'),
+        toggleFix: () => this.setState({ fixOpen: st.fixOpen === o.id ? null : o.id }), fixMsg: (st.fixMsg || {})[o.id] || '' }; };
+    const routeSel = rs ? { ...fixFor(rs.o), stopLabel: 'STOP ' + rs.num, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: rs.v.progress || '0/0', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null;
     const rTake = rl.slice(0, 8);
     const whStart = RE.mode === 'warehouse', origin = whStart ? encodeURIComponent(st.depot) : 'Current+Location', tail = RE.end ? '/' + encodeURIComponent(st.depot) : '';
     let fullRouteUrl = rl.length > 1 || (rl.length && (whStart || RE.end)) ? 'https://www.google.com/maps/dir/' + origin + '/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') + tail : '';
