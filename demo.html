@@ -1278,7 +1278,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.2.1', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.2.2', APP_BUILD = '2026-11-19';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = null;
@@ -2708,10 +2708,10 @@ class Component extends DCLogic {
     const D = st.detail && d.invoices.get(st.detail);
     const detailInv = D ? { ...this.invView(D), rows: this.rowsFor(D), addSvc: () => this.openSvcForm(D.id, null), scanIt: () => this.setState({ tab: 'scan', locked: D.id, detail: null, flash: null, scans: st.scans.filter(s => s.result !== 'PENDING') }) } : null;
     const todayY = this.days().today, scope = isAdmin ? st.invScope : 'day';
-    const inScope = (o, k) => k === 'all' ? true : k === 'past' ? (!o.waiting && (!o.ymd || o.ymd < todayY)) : (o.waiting || this.inDay(o));
+    const inScope = (o, k) => k === 'cb' ? !!(o.comeback && o.waiting) : o.waiting ? false : k === 'all' ? true : k === 'past' ? (!o.ymd || o.ymd < todayY) : this.inDay(o);
     const all = Array.from(d.invoices.values()).filter(o => inScope(o, scope)).map(o => ({ ...this.invView(o), ymd: o.ymd || '', open: () => openInv(o.id) }));
     const scopeDay = { today: 'Today', tomorrow: 'Tomorrow', both: 'Today + tomorrow' }[st.day];
-    const invScopes = isAdmin ? [['day', scopeDay], ['past', 'Past'], ['all', 'All dates']].map(([k, l]) => { const on = scope === k, n = Array.from(d.invoices.values()).filter(o => inScope(o, k)).length;
+    const invScopes = isAdmin ? [['day', scopeDay], ['past', 'Past'], ['all', 'All dates'], ['cb', '↩ Come-backs waiting']].map(([k, l]) => { const on = scope === k, n = Array.from(d.invoices.values()).filter(o => inScope(o, k)).length;
       return { label: l + ' ' + n, pick: () => this.setState({ invScope: k, invFilter: k === 'day' ? st.invFilter : 'All' }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null;
     const filters = ['Open', 'Partial', 'Ready', 'Loaded', 'Delivering', 'Complete', 'All'].map(f => {
       const on = st.invFilter === f, n = f === 'All' ? all.length : all.filter(i => i.st === f).length;
@@ -2880,7 +2880,7 @@ class Component extends DCLogic {
       routeEmpty: !rl.length, routeEmptyText: doneN && !st.showDone ? 'All ' + doneN + ' stops for ' + dayName + ' are delivered.' + (st.depot ? ' Head back to the warehouse.' : '') : 'No invoices with an address scheduled for ' + dayName + '.',
       homeUrl: !rl.length && doneN && st.depot ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(st.depot) : '',
       doneCount: doneN, doneLabel: st.showDone ? 'Hide delivered (' + doneN + ')' : '✓ ' + doneN + ' delivered · show', toggleDone: () => this.setState({ showDone: !st.showDone, routeSel: null }),
-      invEmptyText: all.length ? 'No invoices match.' : scope === 'past' ? 'No past invoices.' : scope === 'all' ? 'No invoices yet.' : 'No invoices scheduled for ' + dayName + '.',
+      invEmptyText: all.length ? 'No invoices match.' : scope === 'cb' ? 'No come-backs waiting for a run sheet.' : scope === 'past' ? 'No past invoices.' : scope === 'all' ? 'No invoices yet.' : 'No invoices scheduled for ' + dayName + '.',
       team: (() => {
         if (!isAdmin) return null;
         const k = s => String(s || '').trim().toLowerCase();
