@@ -44,3 +44,14 @@ Notes:
 - The firebaseConfig values are not secret; access is controlled by sign-in and `firestore.rules`.
 - Delivery photos and signatures are stored in Firestore (`proofs`), so the free Spark plan is enough; no Cloud Storage needed.
 - Drivers sign in with name + PIN; accounts are Firebase Email/Password users named `driver-<name>@scancheck.app`.
+
+## Training copy (demo.html)
+
+`demo.html` is a practice version of the app for training new drivers: https://kj5698.github.io/scanner/demo.html
+
+- Practice invoices, items, services and stops only. No Firebase, no Google Sheet, nothing is saved or sent.
+- **Practice as Driver / Admin** switches roles. **Start over** resets everything.
+- Its saved settings are kept apart from the real app, even on the same phone.
+- `training-barcodes.html` has printable barcodes for every practice model, so trainees can practice with the real camera (the app also has tap-to-scan buttons).
+
+After changing `index.html`, rebuild the training copy with `node tools/build-demo.js`.

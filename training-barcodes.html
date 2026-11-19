@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice Barcodes</title>
+<style>
+:root{--bg:#f4f3ef;--ink:#1c1b18;--card:#fff;--line:#d6d2c8}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans',system-ui,sans-serif;padding:16px}
+h1{font-size:22px;margin:0 0 4px}p{margin:0 0 16px;color:#55524a;max-width:640px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;break-inside:avoid}
+svg{max-width:100%;height:auto}figcaption{font-size:13px;margin-top:4px}
+button{font:600 14px 'IBM Plex Sans',system-ui;padding:10px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;margin-bottom:16px}
+@media print{button,p{display:none}body{background:#fff;padding:0}figure{border-color:#999}}
+</style></head><body>
+<h1>Practice barcodes</h1>
+<p>Print this page (or open it on a second screen) and scan the barcodes with the training app's camera. Every model below is on a practice invoice. Tip: scan one twice, or scan a model that isn't on the invoice you opened, to see the warnings.</p>
+<button onclick="print()">Print</button>
+<div class="grid">
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000117" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>QN65LS03FW</b> · 65" Frame TV</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000223" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>UN55M80H</b> · 55" TV</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000339" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>QN85QN80H</b> · 85" Neo QLED TV</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000445" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>QN48S90H</b> · 48" OLED TV</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000551" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>HW-S800D</b> · Soundbar</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000667" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>43Q651G</b> · 43" TV</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000773" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>5S-CP230P1</b> · Surge protector</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000889" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>5S4KHD2-1.5M</b> · HDMI cable</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001000995" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>WF45B6300AW</b> · Washer</figcaption></figure>
+<figure><svg class="bc" jsbarcode-format="upc" jsbarcode-value="840001001053" jsbarcode-height="70" jsbarcode-width="2" jsbarcode-fontsize="16"></svg><figcaption><b>DVE45B6300W</b> · Dryer</figcaption></figure>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script>JsBarcode('.bc').init();</script>
+</body></html>
