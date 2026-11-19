@@ -1278,7 +1278,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.2.0', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.2.1', APP_BUILD = '2026-11-19';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = null;
@@ -1666,9 +1666,9 @@ class Component extends DCLogic {
     });
     sold.forEach(r => {
       const id = pick(r, [/^invoice/i, /inv/i]); const s = pick(r, [/serv/i, /code/i, /desc/i, /name/i, /item/i]);
-      if (id && s) ensure(id).services.push({ rowId: pick(r, [/^id$/i]), sid: s, amount: pick(r, [/amount|price|total/i]), status: pick(r, [/status/i]) });
+      if (id && s) ensure(id).services.push({ rowId: pick(r, [/^id$/i]), sid: s, amount: pick(r, [/amount|price|total/i]), status: pick(r, [/status/i]), day: toYmd(pick(r, [/date/i])) });
     });
-    const log = (raw.log || []).map(r => ({ invoice: pick(r, [/inv/i]), upc: pick(r, [/upc/i]), model: M(pick(r, [/model/i])), result: M(pick(r, [/result/i])) }));
+    const log = (raw.log || []).map(r => ({ invoice: pick(r, [/inv/i]), upc: pick(r, [/upc/i]), model: M(pick(r, [/model/i])), result: M(pick(r, [/result/i])), day: toYmd(pick(r, [/^day$/i])) || toYmd(pick(r, [/time/i])) }));
     const saved = (raw.chargers || []).map(r => {
       const name = pick(r, [/name|title/i]) || 'Saved charger';
       const address = pick(r, [/addr/i]);
@@ -2215,6 +2215,12 @@ class Component extends DCLogic {
   remaining(inv, m, mode) { const o = this.state.data.invoices.get(inv); if (!o) return 0; const dm = (mode || this.state.mode) === 'deliver'; return (o.items[m] || 0) - (dm ? ((o.cbOut || {})[m] || 0) : 0) - (this.scanned(inv, mode)[m] || 0); }
   R(x) { return this.state.mode !== 'deliver' ? x : x === 'MATCH' ? 'DELIVERED' : x === 'MANUAL' ? 'DELIVERED_MANUAL' : 'DELIVERY_' + x; }
   status(o) {
+    // Return visit: the invoice was finished on an earlier day and a later run sheet brought it back with new services.
+    // The pieces are already delivered, so only the new services are open for this day.
+    if (!o.comeback && o.ymd) {
+      const ty = todayYmd(), fins = this.state.data.log.filter(l => l.invoice === o.id && l.result === 'DELIVERY_COMPLETE').map(l => l.day || ty);
+      if (fins.length && fins.every(x => x < o.ymd) && o.services.some(x => x.day && x.day >= o.ymd)) return { st: 'Services', tot: 0, done: 0, del: 0, tdel: 0, label: 'Return visit', revisit: true };
+    }
     const sc = this.scanned(o.id, 'load'), dv = this.scanned(o.id, 'deliver'), out = o.cbOut || {}; let tot = 0, done = 0, del = 0, tdel = 0;
     Object.keys(o.items).forEach(m => { const need = Math.max(0, o.items[m] - (out[m] || 0)); tot += o.items[m]; tdel += need; done += Math.min(sc[m] || 0, o.items[m]); del += Math.min(dv[m] || 0, need); });
     const has = r => this.state.data.log.some(l => l.invoice === o.id && l.result === r);
@@ -2255,7 +2261,7 @@ class Component extends DCLogic {
 
   sendLog(rows) {
     const full = rows.map(r => ({ ts: Date.now(), device: navigator.userAgent.slice(0, 60), ...r }));
-    this.setState(s => ({ data: { ...s.data, log: s.data.log.concat(full.map(r => ({ invoice: r.invoice, upc: r.upc, model: r.model, result: r.result }))) } }));
+    this.setState(s => ({ data: { ...s.data, log: s.data.log.concat(full.map(r => ({ invoice: r.invoice, upc: r.upc, model: r.model, result: r.result, day: todayYmd() }))) } }));
     if (this.state.demo) return;
     this.call({ action: 'log', rows: JSON.stringify(full) })
       .catch(e => this.setState({ err: 'Scan saved on this phone but not written to the sheet: ' + e.message }));
