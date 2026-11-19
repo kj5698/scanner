@@ -1278,10 +1278,19 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.2.2', APP_BUILD = '2026-11-19';
-// Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
-// until then an admin can paste it in Settings on one phone to try Firebase.
+const APP_VERSION = '2.3.0', APP_BUILD = '2026-11-19';
+// Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
+// To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
+// Company Firebase project (kept for switching back).
+const FIREBASE_PROJECT = {
+  apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
+  authDomain: 'scanner-5ec16.firebaseapp.com',
+  projectId: 'scanner-5ec16',
+  storageBucket: 'scanner-5ec16.firebasestorage.app',
+  messagingSenderId: '180532239827',
+  appId: '1:180532239827:web:e4482a8389259d684ae326'
+};
 const FB_VER = '12.19.0';
 const FB_COLS = ['invoices', 'items', 'upcs', 'servicesold', 'services', 'chargers', 'deliveries', 'comebacks', 'locations', 'drivers'];
 const LOG_DAYS = 60;
@@ -1290,7 +1299,8 @@ const fbEmail = name => 'driver-' + (String(name).trim().toLowerCase().replace(/
 const fbPass = pin => 'scanchk-' + String(pin).trim();
 const todayYmd = () => { const t = new Date(), p2 = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()); };
 const loadScript = src => new Promise((ok, bad) => { if (document.querySelector('script[data-src="' + src + '"]')) return ok(); const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.setAttribute('data-src', src); sc.onload = ok; sc.onerror = () => bad(new Error('Could not load ' + src.split('/').pop())); document.head.appendChild(sc); });
-const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
+const SHEET_URL0 = (() => { try { const u = localStorage.getItem('scanchk.url'); if (u) return u; const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'), v = c && c.url; if (v && /^https:\/\/script\.google/.test(v)) { localStorage.setItem('scanchk.url', v); return v; } } catch (e) {} return ''; })();
+const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; if (lsGet('scanchk.fbon', '') !== '1') return null; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
 function parseFbConfig(txt) {
   const t = String(txt || '').trim(); if (!t) return null;
   try { const j = JSON.parse(t); if (j.apiKey && j.projectId) return j; } catch (e) {}
@@ -2592,7 +2602,7 @@ class Component extends DCLogic {
       syncBtn: st.syncOn ? 'Turn off' : 'Turn on',
       toggleSync: () => { const on = !st.syncOn; lsSet('scanchk.sync', on ? '1' : ''); this.setState({ syncOn: on }, () => { if (on) this.autoSync(); }); },
       fbCfgDraft: st.fbCfgDraft, onFbCfg: e => this.setState({ fbCfgDraft: e.target.value, fbMsg: '' }),
-      connectFb: () => { return this.setState({ fbMsg: 'Turned off in the training copy.' }); }, connectFbOff: () => { const c = parseFbConfig(st.fbCfgDraft); if (!c) return this.setState({ fbMsg: 'That does not look like a Firebase config. Copy the whole firebaseConfig block.' }); lsSet('scanchk.fbconfig', JSON.stringify(c)); try { location.reload(); } catch (e) {} }, loginErr: st.loginErr, noClient: auth && !st.clientId,
+      connectFb: () => { return this.setState({ fbMsg: 'Turned off in the training copy.' }); }, connectFbOff: () => { const c = parseFbConfig(st.fbCfgDraft); if (!c) return this.setState({ fbMsg: 'That does not look like a Firebase config. Copy the whole firebaseConfig block.' }); lsSet('scanchk.fbconfig', JSON.stringify(c)); lsSet('scanchk.fbon', '1'); try { location.reload(); } catch (e) {} }, loginErr: st.loginErr, noClient: auth && !st.clientId,
       signedIn: !!(st.me && st.session && !st.demo), meText: st.me ? st.me.name + (isAdmin && !st.demo ? ' · admin' : '') : '',
       pinOpts: st.pinNames.map(n => ({ v: n, label: n })), pinName: st.pinName || st.pinNames[0] || '', pin: st.pin,
       onPinName: e => this.setState({ pinName: e.target.value, loginErr: '' }),

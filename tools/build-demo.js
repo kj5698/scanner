@@ -67,9 +67,9 @@ const TRAIN_DATA = me => { if (me.role === 'admin') return SAMPLE; const mine = 
   return { ...SAMPLE, invoices: mine, items: SAMPLE.items.filter(r => ids[r.Invoice]), servicesold: SAMPLE.servicesold.filter(r => ids[r.InvoiceNumber]), drivers: [], locations: [] }; };
 `;
 rep(/const SAMPLE = \{[\s\S]*?\n\};\n/, SAMPLE, 'SAMPLE');
-rep(/const FIREBASE_CONFIG = \{[\s\S]*?\n\};/, 'const FIREBASE_CONFIG = null;', 'FIREBASE_CONFIG');
-rep("demo: !localStorage.getItem('scanchk.url'),", 'demo: true,', 'demo state');
-rep("url: localStorage.getItem('scanchk.url') || '', urlDraft: localStorage.getItem('scanchk.url') || '',", "url: '', urlDraft: '',", 'url state');
+if (!/const FIREBASE_CONFIG = null;/.test(h)) rep(/const FIREBASE_CONFIG = \{[\s\S]*?\n\};/, 'const FIREBASE_CONFIG = null;', 'FIREBASE_CONFIG');
+rep('url: SHEET_URL0, urlDraft: SHEET_URL0,', "url: '', urlDraft: '',", 'url state');
+rep('demo: !SHEET_URL0,', 'demo: true,', 'demo state');
 rep("const api = qs.get('api');", 'const api = null;', 'api param');
 rep("fbMode: !!fbCfg(),", 'fbMode: false,', 'fbMode');
 rep("this.setState({ data: this.parse(SAMPLE), err: '', loading: false, authNeeded: false, me: { name: 'You (demo admin)', email: 'demo', role: 'admin' } });",
