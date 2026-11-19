@@ -285,10 +285,8 @@ input{font:inherit}
             </sc-for>
           </div>
         </div>
+        <div style="font-size:12px;color:#55524a;line-height:1.45;padding:8px 10px;border-radius:8px;background:#f4f3ef">Not routed yet. It goes on the route when this invoice shows up again on a run sheet, on that day and stop.</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Come-back date
-            <input type="date" value="{{ cbForm.date }}" onChange="{{ onCbDate }}" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0">
-          </label>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Note (optional)
             <input value="{{ cbForm.note }}" onChange="{{ onCbNote }}" placeholder="e.g. door dented, bring new one" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:15px;color:#1c1b18;min-width:0">
           </label>
@@ -458,6 +456,25 @@ input{font:inherit}
             </sc-if>
             <sc-if value="{{ lockedInv.verified }}" hint-placeholder-val="{{ false }}">
               <div style="margin:12px 16px 0;font-size:13px;line-height:1.45;color:oklch(0.38 0.1 150);font-weight:500">Loaded. At the customer, switch to Delivery and scan the items again.</div>
+            </sc-if>
+            <sc-if value="{{ lockedInv.needsCbDone }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:12px 16px 0;padding:14px;border-radius:12px;border:2px solid oklch(0.58 0.13 70);display:flex;flex-direction:column;gap:12px">
+                <div style="font-weight:600;font-size:17px">Finish come-back</div>
+                <div style="font-size:14px;line-height:1.45;color:#3a3832">{{ cbDone.what }}</div>
+                <div style="font-size:12px;color:#6b675e;line-height:1.4">No charge. No photo or signature needed.</div>
+                <sc-if value="{{ cbDone.asking }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:12px;border-radius:10px;background:oklch(0.95 0.05 80);display:flex;flex-direction:column;gap:10px">
+                    <div style="font-size:15px;font-weight:600;line-height:1.4;color:oklch(0.36 0.1 70)">Is everything for this come-back done at the customer?</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <button onClick="{{ cbDone.yes }}" style="flex:1;min-width:140px;height:50px;border:none;border-radius:10px;background:oklch(0.52 0.13 150);color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">Yes, it's done</button>
+                      <button onClick="{{ cbDone.no }}" style="flex:1;min-width:120px;height:50px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 15px 'IBM Plex Sans';cursor:pointer">Not yet</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ cbDone.idle }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ cbDone.ask }}" style="height:54px;border:none;border-radius:10px;background:oklch(0.58 0.13 70);color:#fff;font:600 16px 'IBM Plex Sans';cursor:pointer">Come-back finished</button>
+                </sc-if>
+              </div>
             </sc-if>
             <sc-if value="{{ lockedInv.needsProof }}" hint-placeholder-val="{{ false }}">
               <div style="margin:12px 16px 0;padding:14px;border-radius:12px;border:2px solid #1c1b18;display:flex;flex-direction:column;gap:14px">
@@ -1125,6 +1142,20 @@ const toYmd = str => { const v = String(str || '').trim(), p2 = n => String(n).p
   const t = Date.parse(v); return isNaN(t) ? '' : (d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()))(new Date(t)); };
 const ymdToUs = y => { const m = String(y || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (+m[2]) + '/' + (+m[3]) + '/' + m[1] : y; };
 const cbItemsTxt = items => Object.keys(items).filter(m => items[m] > 0).map(m => m + ' x' + items[m]).join('; ');
+// A come-back waits (no route, no day) until its invoice comes back on a later run sheet;
+// then it takes that day, stop and driver.
+const invBase = id => String(id || '').trim().replace(/-\d{1,3}$/, '');
+function cbSchedule(inv) {
+  inv.forEach(o => {
+    if (!o.comeback || !o.made) return;
+    const b = invBase(o.parent); let hit = null;
+    inv.forEach(x => { if (!x.comeback && x.ymd && x.ymd > o.made && invBase(x.id) === b && (!hit || x.ymd < hit.ymd)) hit = x; });
+    if (hit) Object.assign(o, { date: hit.date, ymd: hit.ymd, stop: hit.stop, driver: hit.driver || o.driver, waiting: false });
+    else Object.assign(o, { date: '', ymd: '', stop: '', waiting: true });
+    const par = inv.get(o.parent), c = par && par.cbs.find(x => x.id === o.id);
+    if (c) Object.assign(c, { date: o.date, ymd: o.ymd, waiting: o.waiting });
+  });
+}
 function addComeback(inv, c) {
   const parent = inv.get(c.parent); if (!c.parent) return;
   const n = parent ? parent.cbs.length + 1 : 1;
@@ -1133,7 +1164,7 @@ function addComeback(inv, c) {
   const o = inv.get(id);
   Object.assign(o, { comeback: true, parent: c.parent, date: c.date || '', ymd: toYmd(c.date), customer: c.customer || (parent && parent.customer) || '',
     address: c.address || (parent && parent.address) || '', driver: c.driver || (parent && parent.driver) || '', stop: String(c.stop || '').replace(/\D/g, ''),
-    reason: c.reason || '', note: c.note || '', paid: 'No charge', total: '0' });
+    reason: c.reason || '', note: c.note || '', paid: 'No charge', total: '0', made: toYmd(c.created) || o.made || '' });
   String(c.items || '').split(/[;\n]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
     const mm = x.match(/^(.+?)\s*[x×*]\s*(\d+)$/i), m = M(mm ? mm[1] : x), q = mm ? +mm[2] : 1;
     o.items[m] = (o.items[m] || 0) + q;
@@ -1231,7 +1262,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.1.1', APP_BUILD = '2026-11-13';
+const APP_VERSION = '2.2.0', APP_BUILD = '2026-11-19';
 // Firebase web config for the company project. Paste it here once (from Firebase console → Project settings → Your apps → Config);
 // until then an admin can paste it in Settings on one phone to try Firebase.
 const FIREBASE_CONFIG = {
@@ -1645,7 +1676,8 @@ class Component extends DCLogic {
     if (defDrv) inv.forEach(o => { if (!o.driver) o.driver = defDrv; });
     (raw.comebacks || []).forEach(r => addComeback(inv, { id: pick(r, [/come.?back.?id|^cb.?id/i]), parent: pick(r, [/^invoice/i, /^inv/i]), date: pick(r, [/^date$/i, /come.?back.?date|return|sched/i]),
       customer: pick(r, [/cust/i]), address: pick(r, [/addr/i]), driver: pick(r, [/driver/i]), stop: pick(r, [/^\s*stop/i]),
-      items: pick(r, [/^items?$/i, /piece|model/i]), services: pick(r, [/^serv/i]), reason: pick(r, [/reason/i]), note: pick(r, [/note/i]) }));
+      items: pick(r, [/^items?$/i, /piece|model/i]), services: pick(r, [/^serv/i]), reason: pick(r, [/reason/i]), note: pick(r, [/note/i]), created: pick(r, [/^time|timestamp|created/i]) }));
+    cbSchedule(inv);
     const locations = (raw.locations || []).map(r => ({ name: pick(r, [/name/i]), lat: parseFloat(pick(r, [/^lat/i])), lon: parseFloat(pick(r, [/^(lng|lon)/i])), updated: pick(r, [/updat|time/i]) })).filter(l => !isNaN(l.lat) && !isNaN(l.lon));
     if (!saved.some(c => c.lat != null && hav([c.lat, c.lon], [WH_CHARGER.lat, WH_CHARGER.lon]) < 0.2)) saved.push({ ...WH_CHARGER, builtin: true });
     (raw.comebacks || []).forEach(r => { const id = pick(r, [/come.?back.?id|^cb.?id/i]), la = parseFloat(pick(r, [/^lat(itude)?$/i])), lo = parseFloat(pick(r, [/^(lng|lon|long|longitude)$/i])); const o = id && inv.get(id); if (o && !isNaN(la) && !isNaN(lo)) o.pin = { lat: la, lon: lo, src: 'pin' }; });
@@ -2007,8 +2039,7 @@ class Component extends DCLogic {
     const items = cbItemsTxt(f.items), svcs = Object.keys(f.svcs).filter(k => f.svcs[k]).join('; ');
     if (!items && !svcs) return this.setCb({ error: 'Pick at least one piece or service.' });
     if (!f.reason) return this.setCb({ error: 'Pick a reason.' });
-    if (!f.date) return this.setCb({ error: 'Pick a come-back date.' });
-    const row = { parent: o.id, date: ymdToUs(f.date), customer: o.customer, address: o.address, driver: o.driver, items, services: svcs, reason: f.reason, note: (f.note || '').trim() };
+    const row = { parent: o.id, date: '', created: new Date().toISOString(), customer: o.customer, address: o.address, driver: o.driver, items, services: svcs, reason: f.reason, note: (f.note || '').trim() };
     this.setCb({ saving: true });
     let id = '';
     if (!this.state.demo) {
@@ -2023,7 +2054,7 @@ class Component extends DCLogic {
       const inv = new Map(); s.data.invoices.forEach((v, k) => inv.set(k, { ...v, items: { ...v.items }, cbOut: { ...(v.cbOut || {}) }, cbs: (v.cbs || []).slice(), services: v.services.slice() }));
       id = addComeback(inv, { ...row, id });
       return { cbForm: null, data: { ...s.data, invoices: inv } };
-    }, () => { this.tone('done'); this.setFlash('done', 'Come-back ' + id + ' created', 'For ' + row.date + ' · no charge ($0)' + (this.state.demo ? ' · demo only' : ' · saved to COMEBACKS tab')); });
+    }, () => { this.tone('done'); this.setFlash('done', 'Come-back ' + id + ' created', 'Waiting for the next run sheet · no charge ($0)' + (this.state.demo ? ' · demo only' : '')); });
   }
   pinsGeo(d, geo) {
     const out = { ...geo }; let ch = false;
@@ -2390,6 +2421,11 @@ class Component extends DCLogic {
       navigator.wakeLock.request('screen').then(w => { this.wake = w; this.wakeBusy = false; w.addEventListener('release', () => { if (this.wake === w) this.wake = null; }); }).catch(() => { this.wakeBusy = false; });
     } else if (!want && this.wake) { const w = this.wake; this.wake = null; w.release().catch(() => {}); }
   }
+  finishCb(id) {
+    if (this.state.locked !== id) return;
+    this.sendLog([{ upc: '', model: '', invoice: id, result: 'DELIVERY_COMPLETE' }]);
+    this.setState({ cbAsk: null, proof: null }, () => { this.tone('done'); this.backToRoute(id, 'Come-back finished'); });
+  }
   skipProof() {
     const L = this.state.locked, o = L && this.state.data.invoices.get(L); if (!o) return;
     const p = this.state.proof && this.state.proof.inv === L ? this.state.proof : null;
@@ -2495,11 +2531,11 @@ class Component extends DCLogic {
     const left = tt - dn, full = left <= 0 && s.tot > 0;
     const par = o.comeback && this.state.data.invoices.get(o.parent);
     return {
-      id: o.id, customer: o.customer || 'No customer', date: o.date || 'No date', statusLabel: s.label, pillBg: bg, pillFg: fg,
+      id: o.id, customer: o.customer || 'No customer', date: o.waiting ? 'Waiting for the next run sheet' : o.date || 'No date', statusLabel: s.label, pillBg: bg, pillFg: fg,
       progress: s.tot ? dn + '/' + tt : '', st: s.st, done: dn, tot: tt,
       pct: (tt ? Math.round(dn / tt * 100) : s.tot ? 100 : 0) + '%',
       isCb: !!o.comeback, cbParent: o.parent || '', cbWhy: o.comeback ? (o.reason ? ' · ' + o.reason : '') + (o.note ? ' · ' + o.note : '') : '',
-      hasCbs: !!(o.cbs && o.cbs.length), cbs: (o.cbs || []).map(c => ({ id: c.id, text: [ymdToUs(c.ymd) || c.date, c.items, c.services, c.reason].filter(Boolean).join(' · '), open: () => this.setState({ tab: 'invoices', detail: c.id, locked: this.state.tab === 'scan' ? null : this.state.locked }) })),
+      hasCbs: !!(o.cbs && o.cbs.length), cbs: (o.cbs || []).map(c => ({ id: c.id, text: [c.waiting ? 'waiting for run sheet' : ymdToUs(c.ymd) || c.date, c.items, c.services, c.reason].filter(Boolean).join(' · '), open: () => this.setState({ tab: 'invoices', detail: c.id, locked: this.state.tab === 'scan' ? null : this.state.locked }) })),
       canCb: !o.comeback && (Object.keys(o.items).length > 0 || o.services.length > 0), newCb: () => this.openCb(o.id),
       counterText: s.tot === 0 ? 'No merchandise to scan' : dm ? (full ? (s.st === 'Complete' ? 'Delivered' : tt < s.tot ? 'Rest is on a come-back: add photo and signature' : 'All delivered: add photo and signature') : left === 1 ? '1 item left to deliver' : left + ' items left to deliver') : full ? (s.st === 'Ready' ? 'Ready: tap Confirm loaded' : 'Loaded') : left === 1 ? '1 item left: last one' : left + ' items left',
       counterFg: full ? 'oklch(0.38 0.1 150)' : C.ink, counterBg: full ? 'oklch(0.95 0.04 150)' : '#fbfaf7', barColor: full ? C.green : C.amber,
@@ -2585,6 +2621,9 @@ class Component extends DCLogic {
       useDemo: () => { localStorage.removeItem('scanchk.url'); this.setState({ url: '', urlDraft: '', demo: true, settings: false, scans: [], locked: null }, () => this.load()); },
       modes: [['load', 'Loading'], ['deliver', 'Delivery']].map(([k, l]) => { const on = st.mode === k; return { label: l, pick: () => this.setState({ mode: k, locked: null, scans: [], flash: null, qty: null }), bg: on ? '#fff' : 'transparent', fg: on ? C.ink : '#55524a', sh: on ? '0 1px 3px rgba(0,0,0,.12)' : 'none' }; }),
       sigRef: this.sigRef, sigDown: this.sigDown, sigMove: this.sigMove, sigUp: this.sigUp, clearSig: this.clearSig, onPhoto: this.onPhoto,
+      cbDone: (() => { const Lc = st.locked && d && d.invoices.get(st.locked); if (!Lc || !Lc.comeback) return { what: '', asking: false, idle: true, ask: () => {}, yes: () => {}, no: () => {} };
+        const what = [cbItemsTxt(Lc.items), Lc.services.map(x => x.sid).join(', ')].filter(Boolean).join(' · ') || 'Come-back ' + Lc.id, asking = st.cbAsk === Lc.id;
+        return { what: 'Come-back ' + Lc.id + ': ' + what, asking, idle: !asking, ask: () => this.setState({ cbAsk: Lc.id }), no: () => this.setState({ cbAsk: null }), yes: () => this.finishCb(Lc.id) }; })(),
       onReceiver: e => this.setProof({ receiver: e.target.value }), completeDelivery: () => this.completeDelivery(), skipProof: () => this.skipProof(),
       camLabel: st.cam ? 'Stop camera' : 'Start camera', camOff: !st.cam, cam: !!st.cam, readerH: st.cam ? '130px' : '0px',
       toggleCam: () => st.cam ? this.stopCam() : this.startCam(),
@@ -2640,7 +2679,7 @@ class Component extends DCLogic {
     const Ls = L && this.status(L), dl = L && (d.deliveries || []).filter(x => x.invoice === L.id).pop();
     const lockedInv = L ? { ...this.invView(L), rows: this.rowsFor(L),
       needsConfirm: st.mode !== 'deliver' && Ls.st === 'Ready', verified: st.mode !== 'deliver' && verified && Ls.st !== 'Complete',
-      needsProof: st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', isDeliver: st.mode === 'deliver', backRoute: () => { this.stopCam(); this.setState({ tab: 'route', routeSel: L.id }); try { window.scrollTo(0, 0); } catch (e) {} }, delivered: Ls.st === 'Complete',
+      needsProof: !L.comeback && st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', needsCbDone: !!L.comeback && st.mode === 'deliver' && Ls.del >= Ls.tdel && Ls.st !== 'Complete', isDeliver: st.mode === 'deliver', backRoute: () => { this.stopCam(); this.setState({ tab: 'route', routeSel: L.id }); try { window.scrollTo(0, 0); } catch (e) {} }, delivered: Ls.st === 'Complete',
       deliveredText: dl ? 'Delivered' + (dl.receiver ? ', received by ' + dl.receiver : '') + '. Photo and signature saved.' : 'Delivered without photo or signature.',
       photoLink: dl ? dl.photo : '', sigLink: dl ? dl.sig : '', hasPhotoLink: !!(dl && dl.photo), hasSigLink: !!(dl && dl.sig) } : null;
     const pf = L && st.proof && st.proof.inv === L.id ? st.proof : { photo: '', receiver: '', signed: false };
@@ -2655,7 +2694,7 @@ class Component extends DCLogic {
     const D = st.detail && d.invoices.get(st.detail);
     const detailInv = D ? { ...this.invView(D), rows: this.rowsFor(D), addSvc: () => this.openSvcForm(D.id, null), scanIt: () => this.setState({ tab: 'scan', locked: D.id, detail: null, flash: null, scans: st.scans.filter(s => s.result !== 'PENDING') }) } : null;
     const todayY = this.days().today, scope = isAdmin ? st.invScope : 'day';
-    const inScope = (o, k) => k === 'all' ? true : k === 'past' ? (!o.ymd || o.ymd < todayY) : this.inDay(o);
+    const inScope = (o, k) => k === 'all' ? true : k === 'past' ? (!o.waiting && (!o.ymd || o.ymd < todayY)) : (o.waiting || this.inDay(o));
     const all = Array.from(d.invoices.values()).filter(o => inScope(o, scope)).map(o => ({ ...this.invView(o), ymd: o.ymd || '', open: () => openInv(o.id) }));
     const scopeDay = { today: 'Today', tomorrow: 'Tomorrow', both: 'Today + tomorrow' }[st.day];
     const invScopes = isAdmin ? [['day', scopeDay], ['past', 'Past'], ['all', 'All dates']].map(([k, l]) => { const on = scope === k, n = Array.from(d.invoices.values()).filter(o => inScope(o, k)).length;
