@@ -1305,7 +1305,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.5.0', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.5.1', APP_BUILD = '2026-11-19';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1697,7 +1697,8 @@ class Component extends DCLogic {
     (raw.items || []).forEach(r => {
       const id = pick(r, [/^invoice/i, /inv/i]); const m = M(pick(r, [/model/i, /sku/i, /part/i, /item/i]));
       if (!id || !m) return;
-      const q = parseFloat(pick(r, [/qty/i, /quant/i])) || 1; const it = ensure(id).items; it[m] = (it[m] || 0) + q;
+      const q = parseFloat(pick(r, [/qty/i, /quant/i])) || 1, o = ensure(id), it = o.items; it[m] = (it[m] || 0) + q;
+      const dy = toYmd(pick(r, [/date/i])); if (dy) { o.itemDays = o.itemDays || {}; if (!o.itemDays[m] || dy > o.itemDays[m]) o.itemDays[m] = dy; }
     });
     const upcs = {}, upcList = [];
     (raw.upcs || []).forEach(r => {
@@ -2266,7 +2267,18 @@ class Component extends DCLogic {
     // The pieces are already delivered, so only the new services are open for this day.
     if (!o.comeback && o.ymd) {
       const ty = todayYmd(), fins = this.state.data.log.filter(l => l.invoice === o.id && l.result === 'DELIVERY_COMPLETE').map(l => l.day || ty);
-      if (fins.length && fins.every(x => x < o.ymd) && o.services.some(x => x.day && x.day >= o.ymd)) return { st: 'Services', tot: 0, done: 0, del: 0, tdel: 0, label: 'Return visit', revisit: true };
+      if (fins.length && fins.every(x => x < o.ymd)) {
+        const newItems = Object.keys(o.itemDays || {}).some(m => o.itemDays[m] >= o.ymd), newSvc = o.services.some(x => x.day && x.day >= o.ymd);
+        if (newItems) {
+          // new pieces on the return visit: count them like a normal delivery, ignoring the earlier finish
+          const sc = this.scanned(o.id, 'load'), dv = this.scanned(o.id, 'deliver'), out = o.cbOut || {}; let tot = 0, done = 0, del = 0, tdel = 0;
+          Object.keys(o.items).filter(m => (o.itemDays || {})[m] >= o.ymd).forEach(m => { const need = Math.max(0, o.items[m] - (out[m] || 0)); tot += o.items[m]; tdel += need; done += Math.min(sc[m] || 0, o.items[m]); del += Math.min(dv[m] || 0, need); });
+          const lg = this.state.data.log.filter(l => l.invoice === o.id && (l.day || ty) >= o.ymd), ver = lg.some(l => l.result === 'VERIFIED');
+          const st2 = del > 0 ? 'Delivering' : ver ? 'Loaded' : done >= tot ? 'Ready' : done > 0 ? 'Partial' : 'Open';
+          return { st: st2, tot, done, del, tdel, label: 'Return visit · ' + st2, revisit: true };
+        }
+        if (newSvc) return { st: 'Services', tot: 0, done: 0, del: 0, tdel: 0, label: 'Return visit', revisit: true };
+      }
     }
     const sc = this.scanned(o.id, 'load'), dv = this.scanned(o.id, 'deliver'), out = o.cbOut || {}; let tot = 0, done = 0, del = 0, tdel = 0;
     Object.keys(o.items).forEach(m => { const need = Math.max(0, o.items[m] - (out[m] || 0)); tot += o.items[m]; tdel += need; done += Math.min(sc[m] || 0, o.items[m]); del += Math.min(dv[m] || 0, need); });
