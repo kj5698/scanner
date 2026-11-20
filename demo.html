@@ -730,45 +730,6 @@ input{font:inherit}
           <div id="routemap" style="width:100%;height:340px"></div>
         </div>
 
-        <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-            <div style="flex:1;min-width:0;font-weight:600;font-size:15px">Van range</div>
-            <div style="font:600 24px 'IBM Plex Mono';line-height:1">{{ van.rangeText }}</div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;color:#33312b">
-            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Battery now
-              <input value="{{ van.pct }}" onChange="{{ van.onPct }}" inputMode="decimal" placeholder="—" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">%</label>
-            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Pack
-              <select value="{{ van.kwh }}" onChange="{{ van.onKwh }}" style="height:36px;padding:0 6px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
-                <sc-for list="{{ van.kwhOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
-              </select></label>
-            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Efficiency
-              <input value="{{ van.eff }}" onChange="{{ van.onEff }}" inputMode="decimal" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi/kWh</label>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            <div style="font-size:12px;color:#6b675e;margin-right:2px">Load today</div>
-            <sc-for list="{{ van.loads }}" as="f" hint-placeholder-count="3">
-              <button onClick="{{ f.pick }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
-            </sc-for>
-          </div>
-          <div style="font-size:12px;color:#55524a;line-height:1.45">{{ van.wxText }}</div>
-          <div style="font-size:12px;color:#6b675e;line-height:1.45;font-family:'IBM Plex Mono',monospace">{{ van.calcText }}</div>
-          <sc-if value="{{ van.needText }}" hint-placeholder-val="{{ false }}">
-            <div style="font-size:13px;line-height:1.45;padding:8px 10px;border-radius:8px;background:{{ van.needBg }};color:{{ van.needFg }}">{{ van.needText }}</div>
-          </sc-if>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b675e;flex-wrap:wrap">Or type the range from FordPass
-            <input value="{{ van.override }}" onChange="{{ van.onOverride }}" inputMode="decimal" placeholder="—" style="width:64px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi <span>(overrides the estimate)</span></label>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Warehouse address
-            <div style="display:flex;gap:8px">
-              <input value="{{ van.depotDraft }}" onChange="{{ van.onDepot }}" placeholder="Street address, Carteret, NJ" style="flex:1;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:14px;color:#1c1b18;min-width:0">
-              <button onClick="{{ van.saveDepot }}" style="flex:none;height:40px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ van.depotBtn }}</button>
-            </div>
-          </label>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#fbfaf7;border:1px solid #eeebe4">
-            <div style="flex:1;min-width:0;font-size:12px;color:#33312b;line-height:1.4"><b>Charger by the warehouse:</b> Carteret Tesla Supercharger, 793 Roosevelt Ave. Top up here before you leave when the van needs it.</div>
-            <a href="{{ van.whChNav }}" target="_blank" rel="noopener" style="flex:none;height:36px;padding:0 12px;border-radius:8px;background:oklch(0.5 0.14 255);color:#fff;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Navigate</a>
-          </div>
-        </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#55524a">{{ routeStatus }}</div>
           <sc-if value="{{ hasMissing }}" hint-placeholder-val="{{ false }}">
@@ -793,23 +754,7 @@ input{font:inherit}
               <div style="padding:10px 12px;border-radius:8px;background:{{ trip.warnBg }};color:{{ trip.warnFg }};font-size:13px;font-weight:500;line-height:1.4">{{ trip.warn }}</div>
             </sc-if>
             <sc-if value="{{ chargePlan }}" hint-placeholder-val="{{ false }}">
-              <div style="padding:12px;border-radius:10px;background:{{ chargePlan.bg }};display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;gap:10px;align-items:flex-start">
-                  <div style="flex:none;width:24px;height:24px;border-radius:6px;background:oklch(0.54 0.19 27);color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px 'IBM Plex Sans'">T</div>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:14px;font-weight:600;color:{{ chargePlan.fg }}">{{ chargePlan.name }}</div>
-                    <div style="font-size:13px;line-height:1.4;color:{{ chargePlan.fg }}">{{ chargePlan.text }}</div>
-                  </div>
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  <sc-if value="{{ hasChargeUrl }}" hint-placeholder-val="{{ false }}">
-                    <a href="{{ chargePlan.url }}" target="_blank" rel="noopener" style="height:44px;padding:0 14px;border-radius:8px;background:oklch(0.5 0.14 255);color:#fff;font:600 14px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Navigate route with charge stop</a>
-                  </sc-if>
-                  <sc-if value="{{ hasChargeNav }}" hint-placeholder-val="{{ false }}">
-                    <a href="{{ chargePlan.nav }}" target="_blank" rel="noopener" style="height:44px;padding:0 14px;border-radius:8px;border:1px solid #1c1b18;background:#fff;color:#1c1b18;font:600 14px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Go to charger now</a>
-                  </sc-if>
-                </div>
-              </div>
+              <button onClick="{{ goRange }}" style="align-self:flex-start;height:40px;padding:0 14px;border-radius:8px;border:1px solid {{ chargePlan.fg }};background:{{ chargePlan.bg }};color:{{ chargePlan.fg }};font:600 13px 'IBM Plex Sans';cursor:pointer">⚡ Charging plan → Range page</button>
             </sc-if>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <div style="font-size:12px;color:#6b675e">Start</div>
@@ -876,6 +821,82 @@ input{font:inherit}
           </sc-if>
         </div>
 
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRange }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0;font-weight:600;font-size:15px">Van range</div>
+            <div style="font:600 24px 'IBM Plex Mono';line-height:1">{{ van.rangeText }}</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;color:#33312b">
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Battery now
+              <input value="{{ van.pct }}" onChange="{{ van.onPct }}" inputMode="decimal" placeholder="—" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">%</label>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Pack
+              <select value="{{ van.kwh }}" onChange="{{ van.onKwh }}" style="height:36px;padding:0 6px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18">
+                <sc-for list="{{ van.kwhOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+              </select></label>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap">Efficiency
+              <input value="{{ van.eff }}" onChange="{{ van.onEff }}" inputMode="decimal" style="width:58px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi/kWh</label>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <div style="font-size:12px;color:#6b675e;margin-right:2px">Load today</div>
+            <sc-for list="{{ van.loads }}" as="f" hint-placeholder-count="3">
+              <button onClick="{{ f.pick }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:#55524a;line-height:1.45">{{ van.wxText }}</div>
+          <div style="font-size:12px;color:#6b675e;line-height:1.45;font-family:'IBM Plex Mono',monospace">{{ van.calcText }}</div>
+          <sc-if value="{{ van.needText }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px;line-height:1.45;padding:8px 10px;border-radius:8px;background:{{ van.needBg }};color:{{ van.needFg }}">{{ van.needText }}</div>
+          </sc-if>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b675e;flex-wrap:wrap">Or type the range from FordPass
+            <input value="{{ van.override }}" onChange="{{ van.onOverride }}" inputMode="decimal" placeholder="—" style="width:64px;height:36px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font:500 14px 'IBM Plex Mono';color:#1c1b18;text-align:center">mi <span>(overrides the estimate)</span></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Warehouse address
+            <div style="display:flex;gap:8px">
+              <input value="{{ van.depotDraft }}" onChange="{{ van.onDepot }}" placeholder="Street address, Carteret, NJ" style="flex:1;height:40px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fbfaf7;font-size:14px;color:#1c1b18;min-width:0">
+              <button onClick="{{ van.saveDepot }}" style="flex:none;height:40px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:#1c1b18;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ van.depotBtn }}</button>
+            </div>
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#fbfaf7;border:1px solid #eeebe4">
+            <div style="flex:1;min-width:0;font-size:12px;color:#33312b;line-height:1.4"><b>Charger by the warehouse:</b> Carteret Tesla Supercharger, 793 Roosevelt Ave. Top up here before you leave when the van needs it.</div>
+            <a href="{{ van.whChNav }}" target="_blank" rel="noopener" style="flex:none;height:36px;padding:0 12px;border-radius:8px;background:oklch(0.5 0.14 255);color:#fff;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Navigate</a>
+          </div>
+        </div>
+        <sc-if value="{{ hasRoute }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:12px;color:#6b675e">Route for the selected day</div>
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+              <div style="font:600 30px 'IBM Plex Mono';line-height:1">{{ trip.miles }}</div>
+              <div style="font-size:14px;color:#55524a">{{ trip.sub }}</div>
+            </div>
+            <sc-if value="{{ trip.warn }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 12px;border-radius:8px;background:{{ trip.warnBg }};color:{{ trip.warnFg }};font-size:13px;font-weight:500;line-height:1.4">{{ trip.warn }}</div>
+            </sc-if>
+            <sc-if value="{{ chargePlan }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px;border-radius:10px;background:{{ chargePlan.bg }};display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:10px;align-items:flex-start">
+                  <div style="flex:none;width:24px;height:24px;border-radius:6px;background:oklch(0.54 0.19 27);color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px 'IBM Plex Sans'">T</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:{{ chargePlan.fg }}">{{ chargePlan.name }}</div>
+                    <div style="font-size:13px;line-height:1.4;color:{{ chargePlan.fg }}">{{ chargePlan.text }}</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <sc-if value="{{ hasChargeUrl }}" hint-placeholder-val="{{ false }}">
+                    <a href="{{ chargePlan.url }}" target="_blank" rel="noopener" style="height:44px;padding:0 14px;border-radius:8px;background:oklch(0.5 0.14 255);color:#fff;font:600 14px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Navigate route with charge stop</a>
+                  </sc-if>
+                  <sc-if value="{{ hasChargeNav }}" hint-placeholder-val="{{ false }}">
+                    <a href="{{ chargePlan.nav }}" target="_blank" rel="noopener" style="height:44px;padding:0 14px;border-radius:8px;border:1px solid #1c1b18;background:#fff;color:#1c1b18;font:600 14px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center">Go to charger now</a>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+            <div style="font-size:12px;color:#6b675e;line-height:1.4">{{ rangeRouteNote }}</div>
+          </div>
+        </sc-if>
         <sc-if value="{{ hasRoute }}" hint-placeholder-val="{{ false }}">
           <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;overflow:hidden">
             <div style="padding:12px 16px;border-bottom:1px solid #eeebe4;display:flex;align-items:center;gap:10px">
@@ -1284,7 +1305,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.4.0', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.5.0', APP_BUILD = '2026-11-19';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1384,7 +1405,7 @@ class Component extends DCLogic {
       if (!a) return; e.preventDefault(); e.stopPropagation(); this.showProof(a.getAttribute('href'));
     };
     document.addEventListener('click', this.onProofClick, true);
-    const PAGES = ['scan', 'invoices', 'route', 'search', 'team', 'sales'], h0 = (location.hash || '').slice(1);
+    const PAGES = ['scan', 'invoices', 'route', 'range', 'search', 'team', 'sales'], h0 = (location.hash || '').slice(1);
     if (h0 === 'settings') this.state.settings = true; else if (PAGES.indexOf(h0) > -1) this.state.tab = h0;
     this.onPop = () => { const h = (location.hash || '').slice(1) || 'scan'; this.popping = true; if (h === 'settings') this.setState({ settings: true }); else if (PAGES.indexOf(h) > -1) { if (h !== 'scan') this.stopCam(); this.setState({ settings: false, tab: h, detail: h === 'invoices' ? this.state.detail : null }); } else this.popping = false; };
     window.addEventListener('popstate', this.onPop);
@@ -2596,12 +2617,12 @@ class Component extends DCLogic {
   renderVals() {
     const st = this.state, d = st.data;
     const isAdmin = !!(st.me && st.me.role === 'admin'), auth = st.authNeeded;
-    const tabs = (auth ? [] : [['scan', 'Scan'], ['invoices', 'Invoices'], ['route', 'Route'], ['search', 'Search']].concat(isAdmin ? [['team', 'Team'], ['sales', 'Sales']] : [])).map(([k, l]) => ({
+    const tabs = (auth ? [] : [['scan', 'Scan'], ['invoices', 'Invoices'], ['route', 'Route'], ['range', 'Range'], ['search', 'Search']].concat(isAdmin ? [['team', 'Team'], ['sales', 'Sales']] : [])).map(([k, l]) => ({
       label: l, go: () => this.goTab(k), color: st.tab === k && !st.settings ? C.ink : '#6b675e', font: (st.tab === k && !st.settings ? '600' : '500') + (isAdmin ? " 13px" : " 14px") + " 'IBM Plex Sans'", bar: st.tab === k && !st.settings ? C.ink : 'transparent'
     }));
     const base = {
-      tabs, isScan: !auth && !st.settings && st.tab === 'scan', isInv: !auth && !st.settings && st.tab === 'invoices', isSearch: !auth && !st.settings && st.tab === 'search', isRoute: !auth && !st.settings && st.tab === 'route', isTeam: !auth && !st.settings && isAdmin && st.tab === 'team', isSales: !auth && !st.settings && isAdmin && st.tab === 'sales',
-      showDays: !auth && !st.settings && ['scan', 'invoices', 'route'].indexOf(st.tab) > -1, setBtnBg: st.settings ? C.ink : '#fff', setBtnFg: st.settings ? '#fff' : C.ink, setBtnBorder: st.settings ? C.ink : '#d6d2c8',
+      tabs, isScan: !auth && !st.settings && st.tab === 'scan', isInv: !auth && !st.settings && st.tab === 'invoices', isSearch: !auth && !st.settings && st.tab === 'search', isRoute: !auth && !st.settings && st.tab === 'route', isRange: !auth && !st.settings && st.tab === 'range', isTeam: !auth && !st.settings && isAdmin && st.tab === 'team', isSales: !auth && !st.settings && isAdmin && st.tab === 'sales',
+      showDays: !auth && !st.settings && ['scan', 'invoices', 'route', 'range'].indexOf(st.tab) > -1, setBtnBg: st.settings ? C.ink : '#fff', setBtnFg: st.settings ? '#fff' : C.ink, setBtnBorder: st.settings ? C.ink : '#d6d2c8',
       authNeeded: auth && !(st.fbMode && st.fbNoAdmin), fbSetup: !!(auth && st.fbMode && st.fbNoAdmin), loginBusy: st.loginBusy,
       versionText: 'TRAINING · Scan-Check v' + APP_VERSION + ' · ' + APP_BUILD + (st.fbMode ? ' · Firebase' : st.demo ? ' · demo' : ' · Google Sheets'),
       setupName: st.setupName, setupPin: st.setupPin, onSetupName: e => this.setState({ setupName: e.target.value, loginErr: '' }), onSetupPin: e => this.setState({ setupPin: e.target.value.replace(/\D/g, '').slice(0, 8), loginErr: '' }),
@@ -2794,7 +2815,7 @@ class Component extends DCLogic {
       name: c.name, nav: c.nav, tag: c.saved ? 'SAVED' : c.fast ? 'NACS' : 'NACS L2', tagBg: c.saved ? 'oklch(0.85 0.17 90)' : c.fast ? 'oklch(0.9 0.06 150)' : '#ebe8e1',
       sub: c.type + ' · ' + (c.off < 0.1 ? 'on route' : c.off.toFixed(1) + ' mi off route') + ' · around mile ' + Math.round(c.at) + (c.stalls ? ' · ' + c.stalls + ' stalls' : '') + (rng ? ' · ≈' + Math.round(rng - c.at - c.off) + ' mi left here' : ''),
       bg: rng && (c.saved || c.fast) && rng - c.at - c.off >= RES_MIN && rng - c.at - c.off <= RES_MAX ? 'oklch(0.96 0.04 150)' : '#fff',
-      pan: () => { if (this.map) this.map.setView([c.lat, c.lon], 15); }
+      pan: () => { const go = () => { if (this.map) this.map.setView([c.lat, c.lon], 15); }; if (this.state.tab !== 'route') { this.goTab('route'); setTimeout(go, 600); } else go(); }
     }));
     const savedTxt = d.saved && d.saved.length ? nSaved + ' of your ' + d.saved.length + ' saved chargers within 10 mi' : 'No CHARGERS tab found';
     const osmTxt = !chs ? 'searching map…' : chs.retrying ? 'map busy, retrying…' : chs.error ? 'map service busy' : chs.list.length + ' NACS from the map within 3 mi';
@@ -2859,7 +2880,8 @@ class Component extends DCLogic {
       ...base,
       demoUpcs: st.demo ? d.upcList.map(u => ({ label: u.model + ' ' + u.upc.slice(-4), scan: () => { this.last = null; this.onCode(u.upc); } })).concat([{ label: 'Unknown 9999', scan: () => { this.last = null; this.onCode('000000009999'); } }]) : [],
       lockedInv, confirmInv, cands,
-      trip, chargerList, chargeStatus, hasRoute: rl.length > 0,
+      trip, chargerList, chargeStatus, hasRoute: rl.length > 0, goRange: () => this.goTab('range'),
+      rangeRouteNote: st.routeInfo && st.routeInfo.miles ? 'Miles come from the Route page (' + rl.length + ' stop' + (rl.length === 1 ? '' : 's') + ').' : 'Open the Route page once to work out the miles and the charging plan for this day.',
       chRetry: !!(chs && chs.canRetry), retryChargers: () => { if (ri && ri.geom) { this.setState({ chargers: null }); this.findChargers(ri.key, ri.geom); } },
       van: (() => {
         const num = e => e.target.value.replace(/[^\d.]/g, '');
