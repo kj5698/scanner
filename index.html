@@ -1318,7 +1318,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.6.1', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.6.2', APP_BUILD = '2026-11-19';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1339,7 +1339,9 @@ const fbEmail = name => 'driver-' + (String(name).trim().toLowerCase().replace(/
 const fbPass = pin => 'scanchk-' + String(pin).trim();
 const todayYmd = () => { const t = new Date(), p2 = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()); };
 const loadScript = src => new Promise((ok, bad) => { if (document.querySelector('script[data-src="' + src + '"]')) return ok(); const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.setAttribute('data-src', src); sc.onload = ok; sc.onerror = () => bad(new Error('Could not load ' + src.split('/').pop())); document.head.appendChild(sc); });
-const SHEET_URL0 = (() => { try { const u = localStorage.getItem('scanchk.url'); if (u) return u; const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'), v = c && c.url; if (v && /^https:\/\/script\.google/.test(v)) { localStorage.setItem('scanchk.url', v); return v; } } catch (e) {} return ''; })();
+// The company's Google Script link (Apps Script web app). Phones use it when nothing else is saved, and switch to it if their saved link stops working.
+const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxITzdmXZxQqSZSvUYltLkmngYFcRjNPtx5vVA4pC_3cTLomdZNRTcwREo3lUusrlBo/exec';
+const SHEET_URL0 = (() => { try { const u = localStorage.getItem('scanchk.url'); if (u) return u; const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'), v = c && c.url; if (v && /^https:\/\/script\.google/.test(v)) { localStorage.setItem('scanchk.url', v); return v; } } catch (e) {} return SHEET_URL_DEFAULT; })();
 const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; if (lsGet('scanchk.fbon', '') !== '1') return null; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
 function parseFbConfig(txt) {
   const t = String(txt || '').trim(); if (!t) return null;
@@ -1428,6 +1430,7 @@ class Component extends DCLogic {
     this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.syncT = setInterval(() => this.autoSync(), 5 * 60000);
+    this.outT2 = setInterval(() => this.flushOutbox(), 60000);
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading && !this.state.fbMode) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
@@ -1444,7 +1447,7 @@ class Component extends DCLogic {
     this.popping = false; this.lastPg = pg;
   }
   componentDidUpdate() { this.pageSync(); this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
-  componentWillUnmount() { if (this.onPop) window.removeEventListener('popstate', this.onPop); clearInterval(this.teamT); clearInterval(this.syncT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
+  componentWillUnmount() { if (this.onPop) window.removeEventListener('popstate', this.onPop); clearInterval(this.teamT); clearInterval(this.syncT); clearInterval(this.outT2); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
 
   days() {
     const k = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1774,9 +1777,15 @@ class Component extends DCLogic {
       const j = await this.call({});
       if (j && j.ok === false) { if (j.auth) return; throw new Error(j.error); }
       if (j.me) localStorage.setItem('scanchk.me', JSON.stringify(j.me));
-      const pd = this.parse(j);
-      this.setState({ data: pd, geo: this.pinsGeo(pd, this.state.geo), loading: false, authNeeded: false, me: j.me || (this.state.session ? this.state.me : null) }, () => this.startLoc());
+      const pd = this.parse(j), ob = this.outboxGet();
+      if (ob.length) pd.log = pd.log.concat(ob.map(r => ({ invoice: r.invoice, upc: r.upc, model: r.model, result: r.result, day: todayYmd() })));
+      this.setState({ data: pd, geo: this.pinsGeo(pd, this.state.geo), loading: false, authNeeded: false, me: j.me || (this.state.session ? this.state.me : null) }, () => { this.startLoc(); this.flushOutbox(); });
     } catch (e) {
+      // saved link stopped working (e.g. the script was re-deployed under a new link): try the company link once
+      if (/blocked|no response/.test(e.message) && SHEET_URL_DEFAULT && this.state.url !== SHEET_URL_DEFAULT && !this.triedDefault) {
+        this.triedDefault = true; try { localStorage.setItem('scanchk.url', SHEET_URL_DEFAULT); } catch (x) {}
+        return this.setState({ url: SHEET_URL_DEFAULT, urlDraft: SHEET_URL_DEFAULT }, () => this.load());
+      }
       this.setState({ loading: false, err: 'Could not load the sheets (' + e.message + '). Open your link in a new browser tab: you should see text starting with {"invoices" or {"ok". If you see a Google sign-in page, set "Who has access" to Anyone and deploy a New version.' });
     }
   }
@@ -2335,7 +2344,23 @@ class Component extends DCLogic {
     this.setState(s => ({ data: { ...s.data, log: s.data.log.concat(full.map(r => ({ invoice: r.invoice, upc: r.upc, model: r.model, result: r.result, day: todayYmd() }))) } }));
     if (this.state.demo) return;
     this.call({ action: 'log', rows: JSON.stringify(full) })
-      .catch(e => this.setState({ err: 'Scan saved on this phone but not written to the sheet: ' + e.message }));
+      .then(j => { if (j && j.ok === false) throw new Error(j.error || 'refused'); })
+      .catch(e => { const n = this.outboxAdd(full); this.setState({ err: n + ' scan' + (n === 1 ? '' : 's') + ' saved on this phone, waiting to be written to the sheet (' + e.message + '). The app retries every minute.' }); });
+  }
+  outboxGet() { try { return JSON.parse(localStorage.getItem('scanchk.outbox') || '[]'); } catch (e) { return []; } }
+  outboxAdd(rows) { const b = this.outboxGet().concat(rows); try { localStorage.setItem('scanchk.outbox', JSON.stringify(b.slice(-2000))); } catch (e) {} return b.length; }
+  async flushOutbox() {
+    const b = this.outboxGet(); if (!b.length || this.state.demo || this.flushing) return;
+    this.flushing = true;
+    try {
+      for (let i = 0; i < b.length; i += 25) {
+        const j = await this.call({ action: 'log', rows: JSON.stringify(b.slice(i, i + 25)) });
+        if (!j || j.ok === false) throw new Error((j && j.error) || 'refused');
+        try { localStorage.setItem('scanchk.outbox', JSON.stringify(b.slice(i + 25))); } catch (e) {}
+      }
+      this.setState({ err: '' }); this.setFlash('ok', 'Sent ' + b.length + ' saved scan' + (b.length === 1 ? '' : 's'), 'Written to the SCAN LOG');
+    } catch (e) { const left = this.outboxGet().length; if (left) this.setState({ err: left + ' scan' + (left === 1 ? '' : 's') + ' still waiting to be written to the sheet (' + e.message + '). The app retries every minute.' }); }
+    this.flushing = false;
   }
 
   setFlash(kind, title, sub) {
