@@ -1303,7 +1303,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.5.2', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.5.3', APP_BUILD = '2026-11-19';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -2764,7 +2764,7 @@ class Component extends DCLogic {
     const iq = st.invQ.trim().toLowerCase();
     const invSortVal = st.invSort || (scope === 'day' ? 'stop' : 'new');
     const invSortOpts = [['stop', 'Stop #'], ['new', 'Date: newest first'], ['old', 'Date: oldest first'], ['status', 'Status'], ['customer', 'Customer A–Z']].map(([v, label]) => ({ v, label }));
-    const invList = all.filter(i => (st.invFilter === 'All' || i.st === st.invFilter) && (!iq || (i.id + ' ' + i.customer).toLowerCase().includes(iq)))
+    const invList = all.filter(i => (st.invFilter === 'All' || i.st === st.invFilter) && (!iq || (i.id + ' ' + i.customer).toLowerCase().includes(iq) || (/^\d{3}-\d{7}-\d{1,3}$/.test(iq) && i.id.startsWith(iq.replace(/-\d{1,3}$/, '')))))
       .sort((a, b) => {
         const byStop = (a.stop && b.stop ? +a.stop - +b.stop : a.stop ? -1 : b.stop ? 1 : 0), byId = b.id.localeCompare(a.id, undefined, { numeric: true });
         if (invSortVal === 'old') return a.ymd.localeCompare(b.ymd) || byStop || -byId;
