@@ -298,6 +298,20 @@ function stops_(ss, p) {
   return { ok: true, saved: rows.length };
 }
 
+// Invoice note: saved in a "Note" column on the Invoice tab (added automatically). You can also type notes there by hand.
+function note_(ss, p) {
+  const sh = findSheet_(ss, SHEETS.invoices);
+  if (!sh) return { ok: false, error: 'Invoice tab not found' };
+  const nc = ensureCol_(sh, 'Note');
+  const v = sh.getDataRange().getValues(), h = v[0].map(x => String(x).trim());
+  let ic = h.findIndex(x => /^invoice/i.test(x)); if (ic < 0) ic = h.findIndex(x => /inv/i.test(x)); if (ic < 0) ic = 0;
+  const want = String(p.invoice || '').trim();
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][ic]).trim() === want) { sh.getRange(i + 1, nc).setValue(String(p.note || '').slice(0, 500)); return { ok: true, noted: true }; }
+  }
+  return { ok: false, error: 'Invoice ' + want + ' not found in the Invoice tab' };
+}
+
 function comeback_(ss, p, u) {
   if (!p.invoice) return { ok: false, error: 'Missing invoice number' };
   let sh = findSheet_(ss, SHEETS.comebacks);
@@ -351,6 +365,7 @@ function handle_(p) {
     if (p.action === 'loc') return loc_(ss, p, u);
     if (p.action === 'assign') return admin ? assign_(ss, p) : { ok: false, error: 'Only admins can reassign invoices.' };
     if (p.action === 'comeback') return comeback_(ss, p, u);
+    if (p.action === 'note') return note_(ss, p);
     if (p.action === 'stops') return admin ? stops_(ss, p) : { ok: false, error: 'Only admins can change stop order.' };
     return allData_(ss, u);
   } catch (err) {
