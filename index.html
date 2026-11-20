@@ -43,13 +43,15 @@ input{font:inherit}
       </div>
     </div>
     <button onClick="{{ reload }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Refresh</button>
-    <button onClick="{{ toggleSettings }}" style="height:40px;padding:0 12px;border:1px solid #d6d2c8;background:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Settings</button>
+    <button onClick="{{ toggleSettings }}" style="height:40px;padding:0 12px;border:1px solid {{ setBtnBorder }};background:{{ setBtnBg }};border-radius:8px;font:500 13px 'IBM Plex Sans';color:{{ setBtnFg }};cursor:pointer">Settings</button>
   </header>
+  <sc-if value="{{ showDays }}" hint-placeholder-val="{{ true }}">
   <div style="display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto">
     <sc-for list="{{ days }}" as="dy" hint-placeholder-count="3">
       <button onClick="{{ dy.pick }}" style="flex:none;height:34px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid {{ dy.border }};background:{{ dy.bg }};color:{{ dy.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ dy.label }}</button>
     </sc-for>
   </div>
+  </sc-if>
   <nav style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)">
     <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
       <button onClick="{{ t.go }}" style="height:50px;border:none;background:none;cursor:pointer;font:{{ t.font }};color:{{ t.color }};border-bottom:3px solid {{ t.bar }};margin-bottom:-1px">{{ t.label }}</button>
@@ -84,6 +86,10 @@ input{font:inherit}
     </div>
   </sc-if>
   <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:14px 16px 0;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;font-weight:600;font-size:20px;letter-spacing:-0.01em">Settings</div>
+      <button onClick="{{ toggleSettings }}" style="height:38px;padding:0 14px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">Done</button>
+    </div>
     <div style="margin:12px 16px 0;padding:16px;background:#fff;border:1px solid #e2dfd7;border-radius:12px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
         <div style="font-weight:600;font-size:14px">Google Maps (optional)</div>
@@ -1262,7 +1268,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.3.0', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.4.0', APP_BUILD = '2026-11-19';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1362,6 +1368,10 @@ class Component extends DCLogic {
       if (!a) return; e.preventDefault(); e.stopPropagation(); this.showProof(a.getAttribute('href'));
     };
     document.addEventListener('click', this.onProofClick, true);
+    const PAGES = ['scan', 'invoices', 'route', 'search', 'team', 'sales'], h0 = (location.hash || '').slice(1);
+    if (h0 === 'settings') this.state.settings = true; else if (PAGES.indexOf(h0) > -1) this.state.tab = h0;
+    this.onPop = () => { const h = (location.hash || '').slice(1) || 'scan'; this.popping = true; if (h === 'settings') this.setState({ settings: true }); else if (PAGES.indexOf(h) > -1) { if (h !== 'scan') this.stopCam(); this.setState({ settings: false, tab: h, detail: h === 'invoices' ? this.state.detail : null }); } else this.popping = false; };
+    window.addEventListener('popstate', this.onPop);
     if (this.state.fbMode) { this.state.demo = false; this.fbStart(); } else this.load();
     this.fetchWx();
     if (this.state.gkey) this.loadGoogle(this.state.gkey);
@@ -1377,8 +1387,14 @@ class Component extends DCLogic {
       }
     } catch (e) {}
   }
-  componentDidUpdate() { this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
-  componentWillUnmount() { clearInterval(this.teamT); clearInterval(this.syncT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
+  pageSync() {
+    const pg = this.state.settings ? 'settings' : this.state.tab;
+    if (pg === this.lastPg) return;
+    try { if (this.popping || this.lastPg == null) history.replaceState(null, '', location.pathname + location.search + '#' + pg); else history.pushState(null, '', location.pathname + location.search + '#' + pg); } catch (e) {}
+    this.popping = false; this.lastPg = pg;
+  }
+  componentDidUpdate() { this.pageSync(); this.syncMap(); this.syncTeamMap(); this.renderGsi(); this.syncWake(); }
+  componentWillUnmount() { if (this.onPop) window.removeEventListener('popstate', this.onPop); clearInterval(this.teamT); clearInterval(this.syncT); if (this.onNavClick) document.removeEventListener('click', this.onNavClick, true); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); if (this.wake) this.wake.release().catch(() => {}); if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); this.stopCam(); if (this.map) { this.map.remove(); this.map = null; } }
 
   days() {
     const k = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -2514,7 +2530,7 @@ class Component extends DCLogic {
     if (this.state.cam) this.setState({ cam: false });
   }
 
-  goTab(t) { if (t !== 'scan') this.stopCam(); this.setState({ tab: t, detail: t === 'invoices' ? this.state.detail : null }); }
+  goTab(t) { if (t !== 'scan') this.stopCam(); this.setState({ tab: t, settings: false, detail: t === 'invoices' ? this.state.detail : null }); try { window.scrollTo(0, 0); } catch (e) {} }
 
   rowsFor(o) {
     const sc = this.scanned(o.id);
@@ -2566,16 +2582,17 @@ class Component extends DCLogic {
     const st = this.state, d = st.data;
     const isAdmin = !!(st.me && st.me.role === 'admin'), auth = st.authNeeded;
     const tabs = (auth ? [] : [['scan', 'Scan'], ['invoices', 'Invoices'], ['route', 'Route'], ['search', 'Search']].concat(isAdmin ? [['team', 'Team'], ['sales', 'Sales']] : [])).map(([k, l]) => ({
-      label: l, go: () => this.goTab(k), color: st.tab === k ? C.ink : '#6b675e', font: (st.tab === k ? '600' : '500') + (isAdmin ? " 13px" : " 14px") + " 'IBM Plex Sans'", bar: st.tab === k ? C.ink : 'transparent'
+      label: l, go: () => this.goTab(k), color: st.tab === k && !st.settings ? C.ink : '#6b675e', font: (st.tab === k && !st.settings ? '600' : '500') + (isAdmin ? " 13px" : " 14px") + " 'IBM Plex Sans'", bar: st.tab === k && !st.settings ? C.ink : 'transparent'
     }));
     const base = {
-      tabs, isScan: !auth && st.tab === 'scan', isInv: !auth && st.tab === 'invoices', isSearch: !auth && st.tab === 'search', isRoute: !auth && st.tab === 'route', isTeam: !auth && isAdmin && st.tab === 'team', isSales: !auth && isAdmin && st.tab === 'sales',
+      tabs, isScan: !auth && !st.settings && st.tab === 'scan', isInv: !auth && !st.settings && st.tab === 'invoices', isSearch: !auth && !st.settings && st.tab === 'search', isRoute: !auth && !st.settings && st.tab === 'route', isTeam: !auth && !st.settings && isAdmin && st.tab === 'team', isSales: !auth && !st.settings && isAdmin && st.tab === 'sales',
+      showDays: !auth && !st.settings && ['scan', 'invoices', 'route'].indexOf(st.tab) > -1, setBtnBg: st.settings ? C.ink : '#fff', setBtnFg: st.settings ? '#fff' : C.ink, setBtnBorder: st.settings ? C.ink : '#d6d2c8',
       authNeeded: auth && !(st.fbMode && st.fbNoAdmin), fbSetup: !!(auth && st.fbMode && st.fbNoAdmin), loginBusy: st.loginBusy,
       versionText: 'Scan-Check v' + APP_VERSION + ' · ' + APP_BUILD + (st.fbMode ? ' · Firebase' : st.demo ? ' · demo' : ' · Google Sheets'),
       setupName: st.setupName, setupPin: st.setupPin, onSetupName: e => this.setState({ setupName: e.target.value, loginErr: '' }), onSetupPin: e => this.setState({ setupPin: e.target.value.replace(/\D/g, '').slice(0, 8), loginErr: '' }),
       submitSetup: () => this.fbSetupAdmin(), setupBtn: st.loginBusy ? 'Creating…' : 'Create admin account',
       proofView: st.proofView, closeProof: () => this.setState({ proofView: null }),
-      fbOn: st.fbMode, sheetsOn: !st.fbMode, fbOffer: !st.fbMode && (!st.me || st.me.role === 'admin' || st.demo),
+      fbOn: st.fbMode, sheetsOn: !st.fbMode, fbOffer: false,
       fbStatus: !st.fbMode ? '' : 'Connected to project ' + st.fbProject + '. ' + (st.fbOffline ? 'Offline right now: changes are saved on this phone and sync when the signal is back.' : 'Live: changes show on every phone right away.') + (st.fbPending ? ' Syncing…' : ''),
       myPin: st.myPin, onMyPin: e => this.setState({ myPin: e.target.value.replace(/\D/g, '').slice(0, 8) }), changePin: () => this.fbChangePin(),
       fbMsg: st.fbMsg, fbMsgSet: !!st.fbMsg,
@@ -2624,7 +2641,7 @@ class Component extends DCLogic {
       demo: st.demo, showSettings: st.settings, urlDraft: st.urlDraft, errText: st.err,
       sourceLabel: st.fbMode ? (st.loading ? 'Connecting to Firebase…' : d && st.me ? st.me.name + ' · ' + (st.fbOffline ? 'offline, will sync' : 'live') + ' · ' + d.invoices.size + ' invoices' : 'Firebase · sign in') : st.loading ? 'Loading sheets…' : st.demo ? 'Demo data · not connected' : d ? (st.me && !st.demo ? st.me.name + ' · ' : 'Connected · ') + d.invoices.size + ' invoices · ' + d.upcList.length + ' UPCs' : 'Not loaded',
       reload: () => this.load(),
-      toggleSettings: () => this.setState({ settings: !st.settings }),
+      toggleSettings: () => { if (!st.settings) this.stopCam(); this.setState({ settings: !st.settings }); try { window.scrollTo(0, 0); } catch (e) {} },
       onUrlDraft: e => this.setState({ urlDraft: e.target.value }),
       saveUrl: () => { const u = st.urlDraft.trim(); if (!u) return; localStorage.setItem('scanchk.url', u); this.setState({ url: u, demo: false, settings: false, scans: [], locked: null }, () => this.load()); },
       useDemo: () => { localStorage.removeItem('scanchk.url'); this.setState({ url: '', urlDraft: '', demo: true, settings: false, scans: [], locked: null }, () => this.load()); },
