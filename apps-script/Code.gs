@@ -38,6 +38,7 @@ function ensureCol_(sh, name) {
   const h = sh.getRange(1, 1, 1, lc).getValues()[0].map(key_);
   const i = h.findIndex(x => x && x.indexOf(key_(name)) > -1);
   if (i > -1) return i + 1;
+  if (lc + 1 > sh.getMaxColumns()) sh.insertColumnsAfter(sh.getMaxColumns(), 1);
   sh.getRange(1, lc + 1).setValue(name);
   return lc + 1;
 }
