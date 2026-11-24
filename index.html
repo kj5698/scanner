@@ -733,10 +733,13 @@ input{font:inherit}
           <sc-if value="{{ doneCount }}" hint-placeholder-val="{{ false }}">
             <button onClick="{{ toggleDone }}" style="height:34px;padding:0 12px;white-space:nowrap;border-radius:999px;border:1px solid #d6d2c8;background:#fff;color:#1c1b18;font:500 12px 'IBM Plex Sans';cursor:pointer">{{ doneLabel }}</button>
           </sc-if>
-          <sc-if value="{{ fullRouteUrl }}" hint-placeholder-val="{{ false }}">
-            <a href="{{ fullRouteUrl }}" target="_blank" rel="noopener" style="height:40px;padding:0 14px;border-radius:8px;border:1px solid #1c1b18;background:#fff;color:#1c1b18;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center;white-space:nowrap">{{ fullRouteLabel }}</a>
-          </sc-if>
+          <sc-for list="{{ routeParts }}" as="rp" hint-placeholder-count="1">
+            <a href="{{ rp.url }}" target="_blank" rel="noopener" style="height:40px;padding:0 14px;border-radius:8px;border:1px solid #1c1b18;background:#fff;color:#1c1b18;font:600 13px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center;white-space:nowrap">{{ rp.label }}</a>
+          </sc-for>
         </div>
+        <sc-if value="{{ routeSplit }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12px;color:#6b675e;line-height:1.4">{{ routeSplit }}</div>
+        </sc-if>
 
         <sc-if value="{{ hasRoute }}" hint-placeholder-val="{{ false }}">
           <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
@@ -1369,7 +1372,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.7.0', APP_BUILD = '2026-11-23';
+const APP_VERSION = '2.7.1', APP_BUILD = '2026-11-23';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -2897,7 +2900,7 @@ class Component extends DCLogic {
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, retryMissing: () => {}, hasMissing: false, routeMsg: null, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], pu: null, routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', startOpts: [], endText: '', endColor: '', homeUrl: '', fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, retryMissing: () => {}, hasMissing: false, routeMsg: null, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeParts: [], routeSplit: '', pu: null, routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', startOpts: [], endText: '', endColor: '', homeUrl: '', fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -2999,10 +3002,27 @@ class Component extends DCLogic {
       return { showFix: false, canMove: false, stopLabel: 'PICKUP', hasNote: true, noteText: rs.v.noteText, customer: rs.v.customer, address: rs.o.address, id: rs.o.list.map(p => p.items).filter(Boolean).join(', ') || 'Store pickup', idLabel: 'Pick up', progress: rs.v.progress,
         mapUrl: rs.v.mapUrl, deliverLabel: all ? 'Undo pickup' : 'Picked up', deliver: () => this.pickupDone(rs.o.list.map(p => p.id), !all), openLabel: first ? 'Invoice' : 'Pickups', open: () => first ? openInv(first.inv.id) : this.setState({ puOpen: true }) }; })() : null;
     const routeSel = puSel || (rs ? { ...fixFor(rs.o), stopLabel: 'STOP ' + rs.num, idLabel: 'Invoice', deliverLabel: 'Deliver', openLabel: 'Invoice', hasNote: rs.v.hasNote, noteText: rs.v.noteText, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: (rs.v.progress || '0/0') + ' scanned', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null);
-    const rTake = rl.slice(0, 8);
-    const whStart = RE.mode === 'warehouse', origin = whStart ? encodeURIComponent(st.depot) : 'Current+Location', tail = RE.end ? '/' + encodeURIComponent(st.depot) : '';
-    let fullRouteUrl = rl.length > 1 || (rl.length && (whStart || RE.end)) ? 'https://www.google.com/maps/dir/' + origin + '/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') + tail : '';
-    let fullRouteLabel = rl.length > 8 ? 'Navigate first 8 stops' : 'Navigate ' + rl.length + ' stop' + (rl.length === 1 ? '' : 's') + (RE.end ? ' + warehouse' : ''), chargePlan = null;
+    const whStart = RE.mode === 'warehouse', origin = whStart ? encodeURIComponent(st.depot) : 'Current+Location';
+    // Google Maps takes at most 10 points per link (start + 9). Longer routes are split into parts;
+    // the warehouse is only added at the very end of the last part.
+    const NAV_MAX = 9;
+    const navParts = list => {
+      const pts = list.concat(RE.end ? [{ enc: encodeURIComponent(st.depot), wh: true }] : []);
+      if (!list.length || (pts.length === 1 && !whStart)) return [];
+      const out = [];
+      for (let i = 0; i < pts.length; i += NAV_MAX) {
+        const ch = pts.slice(i, i + NAV_MAX), ns = ch.filter(x => x.num != null);
+        const pk = ns.filter(x => /^P/.test(x.num)), nn = ns.filter(x => !/^P/.test(x.num));
+        const rangeTxt = [pk.length ? (pk.length === 1 ? 'pickup' : pk.length + ' pickups') : '', !nn.length ? '' : nn.length === 1 ? 'stop ' + nn[0].num : 'stops ' + nn[0].num + '–' + nn[nn.length - 1].num].filter(Boolean).join(', ');
+        out.push({ url: 'https://www.google.com/maps/dir/' + (i ? 'Current+Location' : origin) + '/' + ch.map(x => x.enc).join('/'),
+          label: [rangeTxt, ch.some(x => x.ch) ? 'charge stop' : '', ch.some(x => x.wh) ? 'warehouse' : ''].filter(Boolean).join(' + ') });
+      }
+      if (out.length > 1) out.forEach((x, k) => { x.label = 'Part ' + (k + 1) + ': ' + x.label; });
+      else if (out.length) out[0].label = 'Navigate ' + (list.filter(x => x.num != null).length === 1 ? '1 stop' : list.filter(x => x.num != null).length + ' stops') + (out[0].label.indexOf('charge') > -1 ? ' + charge stop' : '') + (RE.end ? ' + warehouse' : '');
+      return out;
+    };
+    let routeParts = navParts(rl.map(s => ({ enc: encodeURIComponent(s.o.address), num: s.num })));
+    let fullRouteUrl = routeParts.length ? routeParts[0].url : '', fullRouteLabel = routeParts.length ? routeParts[0].label : '', chargePlan = null;
     const needCharge = !!(rng && mi && rng - mi < RES_MAX);
     if (needCharge && ri && ri.legs) {
       const leftAt = c => rng - (c.at + c.off);
@@ -3015,11 +3035,11 @@ class Component extends DCLogic {
       if (best) {
         const cumById = {}; let cm = 0;
         locIds.forEach((id, i) => { if (ri.fromLoc) cm += ri.legs[i] || 0; else if (i > 0) cm += ri.legs[i - 1] || 0; cumById[id] = cm; });
-        const located = rl.filter(s => s.o.id in cumById).slice(0, 8);
+        const located = rl.filter(s => s.o.id in cumById);
         const before = located.filter(s => cumById[s.o.id] < best.at), after = located.filter(s => cumById[s.o.id] >= best.at);
-        const parts = before.map(s => encodeURIComponent(s.o.address)).concat([best.lat + ',' + best.lon], after.map(s => encodeURIComponent(s.o.address)));
-        fullRouteUrl = 'https://www.google.com/maps/dir/' + origin + '/' + parts.join('/') + tail;
-        fullRouteLabel = 'Navigate stops + charge stop';
+        const P = s => ({ enc: encodeURIComponent(s.o.address), num: s.num });
+        routeParts = navParts(before.map(P).concat([{ enc: best.lat + ',' + best.lon, ch: true }], after.map(P)));
+        fullRouteUrl = routeParts.length ? routeParts[0].url : ''; fullRouteLabel = routeParts.length ? routeParts[0].label : '';
         chargePlan = { ok: true, name: best.name, nav: best.nav, url: fullRouteUrl,
           text: 'Charge stop added after stop ' + (before.length ? before[before.length - 1].num : 'start') + ', around mile ' + Math.round(best.at) + (best.off >= 0.1 ? ', ' + best.off.toFixed(1) + ' mi off route' : ', on route') + '. You will have about ' + bestLeft + ' mi left when you get there' + (inWin ? '.' : ' (no fast NACS charger where you would be down to ' + RES_MIN + '–' + RES_MAX + ' mi, so this is the last good one before that).'),
           bg: inWin ? 'oklch(0.95 0.04 150)' : 'oklch(0.94 0.06 80)', fg: inWin ? 'oklch(0.34 0.09 150)' : 'oklch(0.4 0.1 70)' };
@@ -3113,7 +3133,7 @@ class Component extends DCLogic {
             save: () => this.pickupAdd() } : null,
           msg: st.puMsg || '', msgFg: /^Not saved|^Type/.test(st.puMsg || '') ? C.red : C.green };
       })(),
-      routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
+      routeStops, routeSel, fullRouteUrl, fullRouteLabel, routeParts, routeSplit: routeParts.length > 1 ? 'Google Maps takes up to 9 stops per link, so the route is in ' + routeParts.length + ' parts. Open Part 2 when you finish the last stop of Part 1.' : '', chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
       retryMissing: () => { const g2 = { ...st.geo }; Object.keys(g2).forEach(k => { if (g2[k] === 'x') delete g2[k]; }); this.setState({ geo: g2 }); },
       hasMissing: rl.some(s => geo[s.o.address] === 'x'),
