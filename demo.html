@@ -1391,7 +1391,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.7.2', APP_BUILD = '2026-11-23';
+const APP_VERSION = '2.7.3', APP_BUILD = '2026-11-23';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1891,7 +1891,7 @@ class Component extends DCLogic {
       return { id: pick(r, [/^id$/i]), ymd: toYmd(pick(r, [/^date$/i, /date/i])), store, address: pick(r, [/addr/i]) || (sa ? sa.address : ''), items: pick(r, [/item|model|what/i]),
         invoice: pick(r, [/inv/i]), driver: pick(r, [/driver/i]), done: /^(y|true|1|done|picked|x)/i.test(pick(r, [/done|picked/i])) };
     }).filter(x => x.id && x.address);
-    return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, stores, pickups, catCodes: Array.from(new Set(catCodes)).sort() };
+    return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, stores, pickups, pickupsOff: !('stores' in raw), catCodes: Array.from(new Set(catCodes)).sort() };
   }
 
   async load() {
@@ -3151,7 +3151,8 @@ class Component extends DCLogic {
             onInvoice: e => this.setState({ puForm: { ...st.puForm, invoice: e.target.value } }),
             invOpts: [{ v: '', label: 'None' }].concat(Array.from(d.invoices.values()).filter(o => !o.comeback && o.ymd === ymd).sort((a, b) => (+a.stop || 999) - (+b.stop || 999)).map(o => ({ v: o.id, label: (o.stop ? 'Stop ' + o.stop + ' · ' : '') + (o.customer || '') + ' · ' + o.id }))),
             save: () => this.pickupAdd() } : null,
-          msg: st.puMsg || '', msgFg: /^Not saved|^Pick a store/.test(st.puMsg || '') ? C.red : C.green };
+          msg: st.puMsg || (d.pickupsOff && !st.demo ? 'The store list and the PICKUPS tab are not reaching the app: your Google Script is an older version. In the sheet: Extensions → Apps Script, paste the new Code.gs, then Deploy → Manage deployments → Edit → Version: New version → Deploy.' : ''),
+          msgFg: d.pickupsOff || /^Not saved|^Pick a store/.test(st.puMsg || '') ? C.red : C.green };
       })(),
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, routeParts, routeSplit: routeParts.length > 1 ? 'Google Maps takes up to 9 stops per link, so the route is in ' + routeParts.length + ' parts. Open Part 2 when you finish the last stop of Part 1.' : '', chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
