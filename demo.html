@@ -838,16 +838,19 @@ input{font:inherit}
           <sc-if value="{{ pu.form }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:#fbfaf7;border:1px solid #e2dfd7">
               <div style="font-size:13px;font-weight:600">New pickup for {{ pu.form.dayText }}</div>
-              <sc-if value="{{ pu.form.hasStores }}" hint-placeholder-val="{{ false }}">
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  <sc-for list="{{ pu.form.stores }}" as="so" hint-placeholder-count="1">
-                    <button onClick="{{ so.pick }}" style="height:34px;padding:0 12px;border-radius:999px;border:1px solid oklch(0.5 0.17 300);background:{{ so.bg }};color:{{ so.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ so.label }}</button>
-                  </sc-for>
-                </div>
-              </sc-if>
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Pickup address
-                <input value="{{ pu.form.address }}" onChange="{{ pu.form.onAddress }}" placeholder="Type the address, or tap a store above" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:15px;color:#1c1b18;min-width:0">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Store
+                <select value="{{ pu.form.storeVal }}" onChange="{{ pu.form.onStore }}" style="height:44px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 14px 'IBM Plex Sans';color:#1c1b18">
+                  <sc-for list="{{ pu.form.storeOpts }}" as="so" hint-placeholder-count="0"><option value="{{ so.v }}">{{ so.label }}</option></sc-for>
+                </select>
               </label>
+              <sc-if value="{{ pu.form.typeAddr }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Pickup address
+                  <input value="{{ pu.form.address }}" onChange="{{ pu.form.onAddress }}" placeholder="Address as you'd type it in Google Maps" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:15px;color:#1c1b18;min-width:0">
+                </label>
+              </sc-if>
+              <sc-if value="{{ pu.form.storeAddr }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;line-height:1.4"><span style="padding:1px 4px;border-radius:4px;background:oklch(0.93 0.13 100);font-weight:700">{{ pu.form.storeAddr }}</span></div>
+              </sc-if>
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">What to pick up
                 <input value="{{ pu.form.items }}" onChange="{{ pu.form.onItems }}" placeholder="e.g. HW-S800D" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:15px;color:#1c1b18;min-width:0">
               </label>
@@ -1388,7 +1391,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.7.1', APP_BUILD = '2026-11-23';
+const APP_VERSION = '2.7.2', APP_BUILD = '2026-11-23';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1584,7 +1587,7 @@ class Component extends DCLogic {
   pickupRemove(id) { this.pickupCall({ op: 'remove', id }, l => l.filter(p => p.id !== id)); }
   async pickupAdd() {
     const f = this.state.puForm || {}, dd = this.days(), ymd = this.state.day === 'tomorrow' ? dd.tomorrow : dd.today;
-    const address = String(f.address || '').trim(); if (!address) return this.setState({ puMsg: 'Type the pickup address, or tap a store.' });
+    const address = String(f.address || '').trim(); if (!address) return this.setState({ puMsg: 'Pick a store, or type the pickup address.' });
     const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/), date = (+m[2]) + '/' + (+m[3]) + '/' + m[1].slice(2);
     const o = this.pickupInv(f.invoice);
     const row = { id: 'PU' + Date.now(), ymd, store: f.store || '', address, items: String(f.items || '').trim(), invoice: f.invoice || '', driver: o ? '' : (this.state.me && this.state.me.role !== 'admin' ? this.state.me.name : ''), done: false };
@@ -3133,7 +3136,7 @@ class Component extends DCLogic {
         const left = list.filter(p => !p.done).length;
         return { sub: list.length ? left + ' of ' + list.length + ' to pick up · shown first on the route' : 'Transfers from a store (or any address) to pick up before the deliveries.',
           addLabel: f ? 'Cancel' : '+ Add pickup', addBg: f ? '#fff' : 'oklch(0.5 0.17 300)', addFg: f ? 'oklch(0.5 0.17 300)' : '#fff',
-          toggle: () => this.setState({ puForm: f ? null : { address: '', store: '', items: '', invoice: '' }, puMsg: '', puDel: null }),
+          toggle: () => this.setState({ puForm: f ? null : { address: d.stores[0] ? d.stores[0].address : '', store: d.stores[0] ? d.stores[0].num : '', other: !d.stores.length, items: '', invoice: '' }, puMsg: '', puDel: null }),
           rows: list.map(p => ({ items: p.items || 'Pickup', strike: p.done ? 'line-through' : 'none',
             where: (p.store ? 'Store ' + p.store + ' · ' : '') + p.address,
             forText: p.inv ? 'For ' + (p.inv.stop ? 'stop ' + p.inv.stop + ' · ' : '') + (p.inv.customer || '') + ' · ' + p.inv.id : p.invoice ? 'For invoice ' + p.invoice : (p.drv ? 'Driver: ' + p.drv : 'No invoice'),
@@ -3141,12 +3144,14 @@ class Component extends DCLogic {
             rmLabel: st.puDel === p.id ? 'Tap again' : 'Remove', rmFg: st.puDel === p.id ? C.red : '#55524a',
             remove: () => { if (st.puDel === p.id) { this.setState({ puDel: null }); return this.pickupRemove(p.id); } this.setState({ puDel: p.id }); } })),
           form: f ? { dayText: ymdToUs(ymd), address: f.address, items: f.items, invoice: f.invoice,
-            hasStores: d.stores.length > 0, stores: d.stores.map(x => { const on = f.store === x.num; return { label: 'Store ' + x.num, bg: on ? C.pu : '#fff', fg: on ? '#fff' : C.pu, pick: () => this.setState({ puForm: { ...f, store: on ? '' : x.num, address: on ? '' : x.address } }) }; }),
+            storeVal: f.other ? '__other' : f.store, typeAddr: !!f.other, storeAddr: !f.other ? f.address : '',
+            storeOpts: d.stores.map(x => ({ v: x.num, label: 'Store ' + x.num + (x.name ? ' ' + x.name : '') + ' · ' + x.address })).concat([{ v: '__other', label: 'Other address (type it)' }]),
+            onStore: e => { const v = e.target.value, x = d.stores.find(y => y.num === v); this.setState({ puForm: { ...st.puForm, other: !x, store: x ? x.num : '', address: x ? x.address : '' } }); },
             onAddress: e => this.setState({ puForm: { ...st.puForm, address: e.target.value, store: '' } }), onItems: e => this.setState({ puForm: { ...st.puForm, items: e.target.value } }),
             onInvoice: e => this.setState({ puForm: { ...st.puForm, invoice: e.target.value } }),
             invOpts: [{ v: '', label: 'None' }].concat(Array.from(d.invoices.values()).filter(o => !o.comeback && o.ymd === ymd).sort((a, b) => (+a.stop || 999) - (+b.stop || 999)).map(o => ({ v: o.id, label: (o.stop ? 'Stop ' + o.stop + ' · ' : '') + (o.customer || '') + ' · ' + o.id }))),
             save: () => this.pickupAdd() } : null,
-          msg: st.puMsg || '', msgFg: /^Not saved|^Type/.test(st.puMsg || '') ? C.red : C.green };
+          msg: st.puMsg || '', msgFg: /^Not saved|^Pick a store/.test(st.puMsg || '') ? C.red : C.green };
       })(),
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, routeParts, routeSplit: routeParts.length > 1 ? 'Google Maps takes up to 9 stops per link, so the route is in ' + routeParts.length + ' parts. Open Part 2 when you finish the last stop of Part 1.' : '', chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
