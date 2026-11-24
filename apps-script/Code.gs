@@ -17,7 +17,9 @@ const SHEETS = {
   assignments: ['ASSIGNMENTS', 'ASSIGNMENT'],
   locations: ['DRIVER LOCATIONS'],
   log: ['SCAN LOG'],
-  comebacks: ['COMEBACKS', 'COME BACKS', 'COME-BACKS', 'COMEBACK']
+  comebacks: ['COMEBACKS', 'COME BACKS', 'COME-BACKS', 'COMEBACK'],
+  stores: ['STORES', 'STORE'],
+  pickups: ['PICKUPS', 'PICKUP', 'STORE PICKUPS']
 };
 const LOG_NAME = 'SCAN LOG';
 
@@ -128,6 +130,10 @@ function allData_(ss, u) {
     out.comebacks = out.comebacks.filter(r => key_(col_(r, /driver/i)) === key_(u.name) || ids[String(col_(r, /^invoice/i)).trim()]);
     out.comebacks.forEach(r => { const id = String(col_(r, /come.?back.?id|^cb.?id/i)).trim(); if (id) ids[id] = 1; });
     ['items', 'servicesold', 'log', 'deliveries'].forEach(k => out[k] = out[k].filter(r => ids[String(col_(r, /inv/i)).trim()]));
+    const base = s => String(s || '').trim().replace(/-\d{1,3}$/, ''), bases = {};
+    Object.keys(ids).forEach(id => bases[base(id)] = 1);
+    out.pickups = out.pickups.filter(r => { const iv = String(col_(r, /inv/i)).trim(), dr = key_(col_(r, /driver/i));
+      return iv ? !!bases[base(iv)] : (!dr || dr === key_(u.name)); });
     out.drivers = [];
     out.locations = [];
   }
@@ -313,6 +319,32 @@ function note_(ss, p) {
   return { ok: false, error: 'Invoice ' + want + ' not found in the Invoice tab' };
 }
 
+// Store pickups (transfers from a store, picked up before the deliveries): the "PICKUPS" tab.
+// Columns: ID | Date | Store | Address | Items | Invoice | Driver | Done | CreatedBy | Timestamp. You can also type rows there by hand.
+function pickup_(ss, p, u) {
+  let sh = findSheet_(ss, SHEETS.pickups);
+  const head = ['ID', 'Date', 'Store', 'Address', 'Items', 'Invoice', 'Driver', 'Done', 'CreatedBy', 'Timestamp'];
+  if (!sh) { sh = ss.insertSheet('PICKUPS'); sh.appendRow(head); }
+  const op = String(p.op || 'add'), id = String(p.id || '').trim();
+  if (op === 'add') {
+    const cols = head.map(n => ensureCol_(sh, n)), w = Math.max(sh.getLastColumn(), ...cols), row = new Array(w).fill('');
+    const val = { ID: id || 'PU' + Date.now(), Date: p.date || '', Store: p.store || '', Address: p.address || '', Items: p.items || '', Invoice: p.invoice || '',
+      Driver: p.driver || '', Done: '', CreatedBy: u ? u.name : '', Timestamp: new Date() };
+    if (!val.Address && !val.Store) return { ok: false, error: 'Add an address or a store' };
+    head.forEach((n, i) => row[cols[i] - 1] = val[n]);
+    sh.getRange(sh.getLastRow() + 1, 1, 1, w).setValues([row]);
+    return { ok: true, pickup: true, id: val.ID };
+  }
+  const v = sh.getDataRange().getValues(), h = v[0].map(key_), ic = h.indexOf('id');
+  if (ic < 0) return { ok: false, error: 'The PICKUPS tab has no ID column' };
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][ic]).trim() !== id) continue;
+    if (op === 'remove') { sh.deleteRow(i + 1); return { ok: true, pickup: true }; }
+    if (op === 'done') { sh.getRange(i + 1, ensureCol_(sh, 'Done')).setValue(String(p.done) === '1' ? 'Yes' : ''); return { ok: true, pickup: true }; }
+  }
+  return { ok: false, error: 'Pickup ' + id + ' not found in the PICKUPS tab' };
+}
+
 function comeback_(ss, p, u) {
   if (!p.invoice) return { ok: false, error: 'Missing invoice number' };
   let sh = findSheet_(ss, SHEETS.comebacks);
@@ -367,6 +399,7 @@ function handle_(p) {
     if (p.action === 'assign') return admin ? assign_(ss, p) : { ok: false, error: 'Only admins can reassign invoices.' };
     if (p.action === 'comeback') return comeback_(ss, p, u);
     if (p.action === 'note') return note_(ss, p);
+    if (p.action === 'pickup') return pickup_(ss, p, u);
     if (p.action === 'stops') return admin ? stops_(ss, p) : { ok: false, error: 'Only admins can change stop order.' };
     return allData_(ss, u);
   } catch (err) {

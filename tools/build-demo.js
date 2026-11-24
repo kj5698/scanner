@@ -56,6 +56,8 @@ const SAMPLE = `const SAMPLE = (() => {
     .map(([c, n, p]) => ({ 'ServiceID': c, 'ServiceName': n, 'Price': String(p) }));
   return {
     invoices, items, servicesold, services,
+    stores: [{ 'srt': '66', 'address': '2399 Victory Blvd, Staten Island, NY 10314' }],
+    pickups: [{ 'ID': 'PU1', 'Date': dAgo(0), 'Store': '66', 'Address': '', 'Items': 'HW-S800D (practice transfer)', 'Invoice': I('04'), 'Driver': '', 'Done': '' }],
     drivers: [{ 'Name': T, 'Role': 'driver' }, { 'Name': CO, 'Role': 'driver' }],
     locations: [{ 'Name': CO, 'Lat': '40.6687', 'Lon': '-74.1143', 'Updated': new Date(Date.now() - 6 * 60000).toISOString() }],
     upcs: ${JSON.stringify(MODELS.map(m => ({ UPC: m.upc, Model: m.model, Description: m.desc })))},

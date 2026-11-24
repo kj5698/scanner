@@ -787,13 +787,13 @@ input{font:inherit}
                 <div style="font-size:16px;font-weight:600">{{ routeSel.customer }}</div>
                 <sc-if value="{{ routeSel.hasNote }}" hint-placeholder-val="{{ false }}"><div style="margin-top:4px;padding:4px 8px;border-radius:6px;background:oklch(0.96 0.03 25);border-left:3px solid oklch(0.55 0.21 27);color:oklch(0.5 0.21 27);font-weight:600;font-size:13px;line-height:1.35;white-space:pre-wrap;word-break:break-word">📝 {{ routeSel.noteText }}</div></sc-if>
                 <div style="font-size:14px;line-height:1.5;margin-top:2px"><span style="display:inline;padding:1px 4px;border-radius:4px;background:oklch(0.93 0.13 100);color:#1c1b18;font-weight:700;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ routeSel.address }}</span></div>
-                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b675e;margin-top:4px;word-break:break-all">Invoice {{ routeSel.id }} · {{ routeSel.progress }} scanned</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6b675e;margin-top:4px;word-break:break-all">{{ routeSel.idLabel }} {{ routeSel.id }} · {{ routeSel.progress }}</div>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:8px">
               <a href="{{ routeSel.mapUrl }}" target="_blank" rel="noopener" style="height:50px;border-radius:10px;background:oklch(0.5 0.14 255);color:#fff;font:600 16px 'IBM Plex Sans';text-decoration:none;display:flex;align-items:center;justify-content:center">Navigate</a>
-              <button onClick="{{ routeSel.deliver }}" style="height:50px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">Deliver</button>
-              <button onClick="{{ routeSel.open }}" style="height:50px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 14px 'IBM Plex Sans';cursor:pointer">Invoice</button>
+              <button onClick="{{ routeSel.deliver }}" style="height:50px;border:none;border-radius:10px;background:#1c1b18;color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">{{ routeSel.deliverLabel }}</button>
+              <button onClick="{{ routeSel.open }}" style="height:50px;border:1px solid #d6d2c8;border-radius:10px;background:#fff;color:#1c1b18;font:500 14px 'IBM Plex Sans';cursor:pointer">{{ routeSel.openLabel }}</button>
             </div>
             <sc-if value="{{ routeSel.showFix }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:{{ routeSel.fixBg }};border:1px solid {{ routeSel.fixBorder }}">
@@ -810,6 +810,54 @@ input{font:inherit}
               <button onClick="{{ routeSel.toggleFix }}" style="align-self:flex-start;border:none;background:none;padding:2px 0;font:500 12px 'IBM Plex Sans';color:#55524a;text-decoration:underline;cursor:pointer">{{ routeSel.fixToggleLabel }}</button>
             </sc-if>
           </div>
+        </sc-if>
+
+        <sc-if value="{{ pu }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#fff;border:1px solid #e2dfd7;border-left:4px solid oklch(0.5 0.17 300);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:15px">Store pickups</div>
+              <div style="font-size:12px;color:#6b675e;line-height:1.4">{{ pu.sub }}</div>
+            </div>
+            <button onClick="{{ pu.toggle }}" style="flex:none;height:36px;padding:0 12px;border:1px solid oklch(0.5 0.17 300);border-radius:8px;background:{{ pu.addBg }};color:{{ pu.addFg }};font:600 13px 'IBM Plex Sans';cursor:pointer">{{ pu.addLabel }}</button>
+          </div>
+          <sc-for list="{{ pu.rows }}" as="pr" hint-placeholder-count="0">
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid #eeebe4">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:600;text-decoration:{{ pr.strike }}">{{ pr.items }}</div>
+                <div style="font-size:12px;color:#55524a;line-height:1.4">{{ pr.where }}</div>
+                <div style="font-size:12px;color:#6b675e;line-height:1.4">{{ pr.forText }}</div>
+              </div>
+              <button onClick="{{ pr.toggle }}" style="flex:none;height:34px;padding:0 10px;border:none;border-radius:8px;background:{{ pr.btnBg }};color:#fff;font:600 12px 'IBM Plex Sans';cursor:pointer">{{ pr.btn }}</button>
+              <button onClick="{{ pr.remove }}" style="flex:none;height:34px;padding:0 8px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;color:{{ pr.rmFg }};font:500 12px 'IBM Plex Sans';cursor:pointer">{{ pr.rmLabel }}</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ pu.form }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:#fbfaf7;border:1px solid #e2dfd7">
+              <div style="font-size:13px;font-weight:600">New pickup for {{ pu.form.dayText }}</div>
+              <sc-if value="{{ pu.form.hasStores }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ pu.form.stores }}" as="so" hint-placeholder-count="1">
+                    <button onClick="{{ so.pick }}" style="height:34px;padding:0 12px;border-radius:999px;border:1px solid oklch(0.5 0.17 300);background:{{ so.bg }};color:{{ so.fg }};font:500 13px 'IBM Plex Sans';cursor:pointer">{{ so.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">Pickup address
+                <input value="{{ pu.form.address }}" onChange="{{ pu.form.onAddress }}" placeholder="Type the address, or tap a store above" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:15px;color:#1c1b18;min-width:0">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">What to pick up
+                <input value="{{ pu.form.items }}" onChange="{{ pu.form.onItems }}" placeholder="e.g. HW-S800D" style="height:44px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font-size:15px;color:#1c1b18;min-width:0">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b675e">For invoice (optional)
+                <select value="{{ pu.form.invoice }}" onChange="{{ pu.form.onInvoice }}" style="height:44px;padding:0 10px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 14px 'IBM Plex Sans';color:#1c1b18">
+                  <sc-for list="{{ pu.form.invOpts }}" as="io" hint-placeholder-count="0"><option value="{{ io.v }}">{{ io.label }}</option></sc-for>
+                </select>
+              </label>
+              <button onClick="{{ pu.form.save }}" style="height:46px;border:none;border-radius:10px;background:oklch(0.5 0.17 300);color:#fff;font:600 15px 'IBM Plex Sans';cursor:pointer">Add to route</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ pu.msg }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:{{ pu.msgFg }}">{{ pu.msg }}</div></sc-if>
+        </div>
         </sc-if>
 
         <div style="background:#fff;border:1px solid #e2dfd7;border-radius:12px;overflow:hidden">
@@ -1170,6 +1218,8 @@ const SAMPLE = (() => {
     .map(([c, n, p]) => ({ 'ServiceID': c, 'ServiceName': n, 'Price': String(p) }));
   return {
     invoices, items, servicesold, services,
+    stores: [{ 'srt': '66', 'address': '2399 Victory Blvd, Staten Island, NY 10314' }],
+    pickups: [{ 'ID': 'PU1', 'Date': dAgo(0), 'Store': '66', 'Address': '', 'Items': 'HW-S800D (practice transfer)', 'Invoice': I('04'), 'Driver': '', 'Done': '' }],
     drivers: [{ 'Name': T, 'Role': 'driver' }, { 'Name': CO, 'Role': 'driver' }],
     locations: [{ 'Name': CO, 'Lat': '40.6687', 'Lon': '-74.1143', 'Updated': new Date(Date.now() - 6 * 60000).toISOString() }],
     upcs: [{"UPC":"840001000117","Model":"QN65LS03FW","Description":"65\" Frame TV"},{"UPC":"840001000223","Model":"UN55M80H","Description":"55\" TV"},{"UPC":"840001000339","Model":"QN85QN80H","Description":"85\" Neo QLED TV"},{"UPC":"840001000445","Model":"QN48S90H","Description":"48\" OLED TV"},{"UPC":"840001000551","Model":"HW-S800D","Description":"Soundbar"},{"UPC":"840001000667","Model":"43Q651G","Description":"43\" TV"},{"UPC":"840001000773","Model":"5S-CP230P1","Description":"Surge protector"},{"UPC":"840001000889","Model":"5S4KHD2-1.5M","Description":"HDMI cable"},{"UPC":"840001000995","Model":"WF45B6300AW","Description":"Washer"},{"UPC":"840001001053","Model":"DVE45B6300W","Description":"Dryer"}],
@@ -1182,6 +1232,7 @@ const TRAIN_DATA = me => { if (me.role === 'admin') return SAMPLE; const mine = 
 
 const C = {
   green: 'oklch(0.52 0.13 150)', red: 'oklch(0.54 0.17 28)', amber: 'oklch(0.58 0.13 70)', ink: '#1c1b18',
+  pickup: ['oklch(0.92 0.06 300)', 'oklch(0.4 0.15 300)'], pu: 'oklch(0.5 0.17 300)',
   pill: { Complete: ['oklch(0.92 0.05 150)', 'oklch(0.38 0.1 150)'], Partial: ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'], Ready: ['oklch(0.93 0.04 255)', 'oklch(0.4 0.12 255)'], Loaded: ['oklch(0.93 0.05 300)', 'oklch(0.4 0.12 300)'], Delivering: ['oklch(0.93 0.06 80)', 'oklch(0.42 0.1 70)'], Open: ['#ebe8e1', '#4a473f'], Services: ['#ebe8e1', '#4a473f'] }
 };
 const svcColor = st => { const s = String(st || '').toLowerCase();
@@ -1334,7 +1385,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.6.2', APP_BUILD = '2026-11-19';
+const APP_VERSION = '2.7.0', APP_BUILD = '2026-11-23';
 // Firebase is switched OFF: the app runs on the Google Sheet (Apps Script).
 // To switch back on, change the next line to:  const FIREBASE_CONFIG = FIREBASE_PROJECT;
 const FIREBASE_CONFIG = null;
@@ -1478,9 +1529,65 @@ class Component extends DCLogic {
     const d = this.state.data; if (!d) return [];
     const keepDone = withDone || this.state.showDone;
     const rd = this.state.routeDrv && this.state.me && this.state.me.role === 'admin' ? this.state.routeDrv.trim().toLowerCase() : '';
-    return Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address && (keepDone || this.status(o).st !== 'Complete') && (!rd || (rd === '__un' ? !String(o.driver || '').trim() : String(o.driver || '').trim().toLowerCase() === rd)))
+    const invs = Array.from(d.invoices.values()).filter(o => this.inDay(o) && o.address && (keepDone || this.status(o).st !== 'Complete') && (!rd || (rd === '__un' ? !String(o.driver || '').trim() : String(o.driver || '').trim().toLowerCase() === rd)))
       .sort((a, b) => (a.ymd || '').localeCompare(b.ymd || '') || ((a.stop !== '' ? +a.stop : 999) - (b.stop !== '' ? +b.stop : 999)) || a.id.localeCompare(b.id))
       .map((o, i) => ({ o, v: this.invView(o), num: o.stop || String(i + 1) }));
+    const pus = this.pickupStops(rd).filter(s => keepDone || s.v.st !== 'Complete');
+    if (!pus.length) return invs;
+    pus.forEach((s, i) => { s.num = pus.length > 1 ? 'P' + (i + 1) : 'P'; });
+    // store pickups go first on their day: the pieces have to be on the van before the deliveries
+    return pus.concat(invs).sort((a, b) => (a.o.ymd || '').localeCompare(b.o.ymd || '') || (b.o.pickup ? 1 : 0) - (a.o.pickup ? 1 : 0));
+  }
+  pickupInv(id) {
+    const d = this.state.data, t = String(id || '').trim(); if (!d || !t) return null;
+    if (d.invoices.has(t)) return d.invoices.get(t);
+    const b = t.replace(/-\d{1,3}$/, '');
+    return Array.from(d.invoices.values()).find(o => !o.comeback && o.id.replace(/-\d{1,3}$/, '') === b) || null;
+  }
+  pickupsForDay() {
+    const d = this.state.data; if (!d || !d.pickups) return [];
+    return d.pickups.filter(p => this.inDay(p)).map(p => { const o = this.pickupInv(p.invoice); return { ...p, inv: o, drv: (o && o.driver) || p.driver || '' }; });
+  }
+  pickupStops(rd) {
+    const groups = new Map();
+    this.pickupsForDay().forEach(p => {
+      if (rd && (rd === '__un' ? !!String(p.drv).trim() : (String(p.drv).trim() && String(p.drv).trim().toLowerCase() !== rd))) return;
+      const k = p.ymd + '|' + p.address.trim().toLowerCase();
+      if (!groups.has(k)) groups.set(k, { id: 'PU|' + k, pickup: true, ymd: p.ymd, address: p.address, stop: '', store: p.store, list: [] });
+      const g = groups.get(k); g.list.push(p); if (!g.store && p.store) g.store = p.store;
+    });
+    return Array.from(groups.values()).map(o => {
+      const n = o.list.length, dn = o.list.filter(p => p.done).length, all = dn === n, [bg, fg] = all ? C.pill.Complete : C.pickup;
+      const st = this.state.data.stores.find(x => x.num === o.store);
+      const lines = o.list.map(p => (p.done ? '✓ ' : '') + (p.items || 'Pickup') + (p.inv ? ' → ' + (p.inv.stop ? 'stop ' + p.inv.stop + ', ' : '') + (p.inv.customer || p.inv.id) : p.invoice ? ' → ' + p.invoice : ''));
+      return { o, num: 'P', v: { id: o.id, st: all ? 'Complete' : 'Ready', statusLabel: all ? 'Picked up' : 'Pick up ' + (n - dn) + '/' + n, pillBg: bg, pillFg: fg,
+        customer: 'Store pickup' + (o.store ? ' · Store ' + o.store : '') + (st && st.name ? ' ' + st.name : ''), hasNote: true, noteText: 'PICK UP BEFORE DELIVERIES:\n' + lines.join('\n'), progress: dn + '/' + n + ' picked up',
+        mapUrl: 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(o.address) } };
+    });
+  }
+  async pickupCall(params, local) {
+    const put = fn => this.setState(s => ({ data: { ...s.data, pickups: fn(s.data.pickups || []) } }));
+    const before = this.state.data.pickups;
+    put(local);
+    if (this.state.demo) return true;
+    try {
+      const j = await this.call({ action: 'pickup', ...params });
+      if (!j || j.ok === false) throw new Error((j && j.error) || 'Not saved');
+      if (!j.pickup) throw new Error('your Google Script is an older version. Paste the new Code.gs and deploy a new version');
+      return true;
+    } catch (e) { this.setState(s => ({ data: { ...s.data, pickups: before }, puMsg: 'Not saved: ' + e.message })); return false; }
+  }
+  pickupDone(ids, done) { const set = new Set(ids); ids.forEach(id => this.pickupCall({ op: 'done', id, done: done ? '1' : '0' }, l => l.map(p => set.has(p.id) ? { ...p, done } : p))); }
+  pickupRemove(id) { this.pickupCall({ op: 'remove', id }, l => l.filter(p => p.id !== id)); }
+  async pickupAdd() {
+    const f = this.state.puForm || {}, dd = this.days(), ymd = this.state.day === 'tomorrow' ? dd.tomorrow : dd.today;
+    const address = String(f.address || '').trim(); if (!address) return this.setState({ puMsg: 'Type the pickup address, or tap a store.' });
+    const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/), date = (+m[2]) + '/' + (+m[3]) + '/' + m[1].slice(2);
+    const o = this.pickupInv(f.invoice);
+    const row = { id: 'PU' + Date.now(), ymd, store: f.store || '', address, items: String(f.items || '').trim(), invoice: f.invoice || '', driver: o ? '' : (this.state.me && this.state.me.role !== 'admin' ? this.state.me.name : ''), done: false };
+    this.setState({ puForm: null, puMsg: '' });
+    const ok = await this.pickupCall({ op: 'add', id: row.id, date, store: row.store, address: row.address, items: row.items, invoice: row.invoice, driver: row.driver }, l => l.concat([row]));
+    if (ok) this.setState({ puMsg: '✓ Pickup added to the route for ' + ymdToUs(ymd) + '.' });
   }
 
   setBase(map) {
@@ -1528,8 +1635,8 @@ class Component extends DCLogic {
       stops.forEach(s => {
         const g = geo[s.o.address]; if (!g || g === 'x') return;
         const sel = selId === s.o.id, z = sel ? 40 : 30;
-        const color = sel ? 'oklch(0.5 0.14 255)' : s.v.st === 'Complete' ? C.green : s.v.st === 'Ready' ? 'oklch(0.5 0.14 255)' : s.v.st === 'Partial' ? C.amber : C.ink;
-        const icon = L.divIcon({ className: '', iconSize: [z, z], iconAnchor: [z / 2, z / 2], html: '<div style="width:' + z + 'px;height:' + z + 'px;border-radius:50%;background:' + color + ';color:#fff;border:2px solid #fff;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:600 ' + (sel ? 15 : 13) + 'px IBM Plex Mono,monospace">' + s.num + '</div>' });
+        const color = sel ? 'oklch(0.5 0.14 255)' : s.v.st === 'Complete' ? C.green : s.o.pickup ? C.pu : s.v.st === 'Ready' ? 'oklch(0.5 0.14 255)' : s.v.st === 'Partial' ? C.amber : C.ink;
+        const icon = L.divIcon({ className: '', iconSize: [z, z], iconAnchor: [z / 2, z / 2], html: '<div style="width:' + z + 'px;height:' + z + 'px;border-radius:' + (s.o.pickup ? '8px' : '50%') + ';background:' + color + ';color:#fff;border:2px solid #fff;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:600 ' + (sel ? 15 : 13) + 'px IBM Plex Mono,monospace">' + s.num + '</div>' });
         L.marker([g.lat, g.lon], { icon, zIndexOffset: sel ? 1000 : 0 }).on('click', () => this.setState({ routeSel: s.o.id })).addTo(this.layer);
         pts.push([g.lat, g.lon]);
       });
@@ -1771,7 +1878,14 @@ class Component extends DCLogic {
     if (!saved.some(c => c.lat != null && hav([c.lat, c.lon], [WH_CHARGER.lat, WH_CHARGER.lon]) < 0.2)) saved.push({ ...WH_CHARGER, builtin: true });
     (raw.comebacks || []).forEach(r => { const id = pick(r, [/come.?back.?id|^cb.?id/i]), la = parseFloat(pick(r, [/^lat(itude)?$/i])), lo = parseFloat(pick(r, [/^(lng|lon|long|longitude)$/i])); const o = id && inv.get(id); if (o && !isNaN(la) && !isNaN(lo)) o.pin = { lat: la, lon: lo, src: 'pin' }; });
     inv.forEach(o => { if (!o.pin && o.comeback && inv.get(o.parent) && inv.get(o.parent).pin && o.address === inv.get(o.parent).address) o.pin = inv.get(o.parent).pin; });
-    return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, catCodes: Array.from(new Set(catCodes)).sort() };
+    const sNum = v => String(v || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    const stores = (raw.stores || []).map(r => ({ num: sNum(pick(r, [/^srt/i, /store|^no\b|num|#/i])), address: pick(r, [/addr/i]), name: pick(r, [/name/i]) })).filter(x => x.num && x.address);
+    const pickups = (raw.pickups || []).map(r => {
+      const store = sNum(pick(r, [/store/i])), sa = stores.find(x => x.num === store);
+      return { id: pick(r, [/^id$/i]), ymd: toYmd(pick(r, [/^date$/i, /date/i])), store, address: pick(r, [/addr/i]) || (sa ? sa.address : ''), items: pick(r, [/item|model|what/i]),
+        invoice: pick(r, [/inv/i]), driver: pick(r, [/driver/i]), done: /^(y|true|1|done|picked|x)/i.test(pick(r, [/done|picked/i])) };
+    }).filter(x => x.id && x.address);
+    return { invoices: inv, upcs, upcList, log, cat, saved, deliveries, drivers, locations, defDrv, stores, pickups, catCodes: Array.from(new Set(catCodes)).sort() };
   }
 
   async load() {
@@ -1963,6 +2077,7 @@ class Component extends DCLogic {
     const fs = this.fs, me = this.state.me || {}, now = new Date().toISOString();
     const a = p.action || '';
     if (a === 'config') return { ok: true, config: true, auth: true, drivers: this.state.pinNames };
+    if (a === 'pickup') return { ok: false, error: 'store pickups are saved in Google Sheets mode only' };
     if (a === 'log') {
       const b = fs.batch(); JSON.parse(p.rows || '[]').forEach(r => b.set(fs.collection('log').doc(), this.fbLogRow(r))); this.fbCommit(b, 'Scan'); return { ok: true };
     }
@@ -2797,7 +2912,7 @@ class Component extends DCLogic {
       svcOptions: d ? d.catCodes.map(c => ({ v: c, label: d.cat[c] || '' })) : [],
       modelOptions: d ? Array.from(new Set(d.upcList.map(u => u.model).concat(...Array.from(d.invoices.values()).map(o => Object.keys(o.items))))).sort() : []
     };
-    if (!d) return { ...base, retryMissing: () => {}, hasMissing: false, routeMsg: null, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', startOpts: [], endText: '', endColor: '', homeUrl: '', fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
+    if (!d) return { ...base, retryMissing: () => {}, hasMissing: false, routeMsg: null, van: null, routeDrivers: null, team: null, sales: null, invScopes: null, invSortOpts: [], invSortVal: '', onInvSort: () => {}, proof: null, scanSummary: '', qty: null, routeStops: [], pu: null, routeSel: null, routeStatus: '', trip: null, chargerList: [], chargeStatus: '', chRetry: false, hasRoute: false, range: '', startOpts: [], endText: '', endColor: '', homeUrl: '', fullRouteUrl: '', fullRouteLabel: '', routeEmpty: false, routeEmptyText: '', invEmptyText: '', chargePlan: null, hasChargeNav: false, hasChargeUrl: false, demoUpcs: [], lockedInv: null, showCands: false, cands: [], idle: true, hasScans: false, recent: [], scanCount: 0, detailInv: null, noDetail: true, filters: [], invList: [], invEmpty: false, results: [], searchHint: '' };
 
     const openInv = id => this.setState({ tab: 'invoices', detail: id });
     const L = st.locked && d.invoices.get(st.locked);
@@ -2855,7 +2970,7 @@ class Component extends DCLogic {
     const routeStops = rl.map(s => {
       const sel = st.routeSel === s.o.id;
       return { missing: missingOf(s.o), num: s.num, hasNote: s.v.hasNote, noteText: s.v.noteText, customer: s.v.customer, address: s.o.address, statusLabel: s.v.statusLabel, pillBg: s.v.pillBg, pillFg: s.v.pillFg,
-        dot: sel ? 'oklch(0.5 0.14 255)' : s.v.st === 'Complete' ? C.green : s.v.st === 'Ready' ? 'oklch(0.5 0.14 255)' : s.v.st === 'Partial' ? C.amber : C.ink,
+        dot: sel ? 'oklch(0.5 0.14 255)' : s.v.st === 'Complete' ? C.green : s.o.pickup ? C.pu : s.v.st === 'Ready' ? 'oklch(0.5 0.14 255)' : s.v.st === 'Partial' ? C.amber : C.ink,
         bg: sel ? 'oklch(0.95 0.03 255)' : '#fff', pick: () => this.setState({ routeSel: s.o.id }) };
     });
     const ri = st.routeInfo, chs = st.chargers;
@@ -2895,7 +3010,10 @@ class Component extends DCLogic {
         fixText: txt != null ? txt : cleanAddr(o.address), onFixText: e => { const v = e.target.value; this.setState(s2 => ({ fixText: { ...(s2.fixText || {}), [o.id]: v } })); },
         fixSearch: () => this.fixLocation(o.id, 'text', txt != null ? txt : cleanAddr(o.address)), fixHere: () => this.fixLocation(o.id, 'here'),
         toggleFix: () => this.setState({ fixOpen: st.fixOpen === o.id ? null : o.id }), fixMsg: (st.fixMsg || {})[o.id] || '' }; };
-    const routeSel = rs ? { ...fixFor(rs.o), stopLabel: 'STOP ' + rs.num, hasNote: rs.v.hasNote, noteText: rs.v.noteText, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: rs.v.progress || '0/0', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null;
+    const puSel = rs && rs.o.pickup ? (() => { const all = rs.o.list.every(p => p.done), first = rs.o.list.find(p => p.inv);
+      return { showFix: false, canMove: false, stopLabel: 'PICKUP', hasNote: true, noteText: rs.v.noteText, customer: rs.v.customer, address: rs.o.address, id: rs.o.list.map(p => p.items).filter(Boolean).join(', ') || 'Store pickup', idLabel: 'Pick up', progress: rs.v.progress,
+        mapUrl: rs.v.mapUrl, deliverLabel: all ? 'Undo pickup' : 'Picked up', deliver: () => this.pickupDone(rs.o.list.map(p => p.id), !all), openLabel: first ? 'Invoice' : 'Pickups', open: () => first ? openInv(first.inv.id) : this.setState({ puOpen: true }) }; })() : null;
+    const routeSel = puSel || (rs ? { ...fixFor(rs.o), stopLabel: 'STOP ' + rs.num, idLabel: 'Invoice', deliverLabel: 'Deliver', openLabel: 'Invoice', hasNote: rs.v.hasNote, noteText: rs.v.noteText, customer: rs.v.customer, address: rs.o.address, id: rs.o.id, progress: (rs.v.progress || '0/0') + ' scanned', mapUrl: rs.v.mapUrl, deliver: () => { this.stopCam(); this.setState({ tab: 'scan', mode: 'deliver', locked: rs.o.id, scans: [], flash: null, qty: null }); window.scrollTo(0, 0); }, open: () => openInv(rs.o.id) } : null);
     const rTake = rl.slice(0, 8);
     const whStart = RE.mode === 'warehouse', origin = whStart ? encodeURIComponent(st.depot) : 'Current+Location', tail = RE.end ? '/' + encodeURIComponent(st.depot) : '';
     let fullRouteUrl = rl.length > 1 || (rl.length && (whStart || RE.end)) ? 'https://www.google.com/maps/dir/' + origin + '/' + rTake.map(s => encodeURIComponent(s.o.address)).join('/') + tail : '';
@@ -2990,6 +3108,26 @@ class Component extends DCLogic {
       endText: RE.end ? '→ ends at the warehouse' : st.depot ? '→ finding the warehouse…' : '→ add the warehouse address to end there', endColor: RE.end ? '#33312b' : C.amber,
       routeDrivers: isAdmin && (d.drivers || []).length ? [['', 'All drivers']].concat((d.drivers || []).filter(x => x.role !== 'admin' || Array.from(d.invoices.values()).some(o => String(o.driver || '').trim().toLowerCase() === x.name.toLowerCase())).map(x => [x.name.toLowerCase(), x.name])).map(([v, l]) => { const on = (st.routeDrv || '') === v; return { label: l, pick: () => this.setState({ routeDrv: v, routeSel: null }), bg: on ? C.ink : '#fff', fg: on ? '#fff' : C.ink, border: on ? C.ink : '#d6d2c8' }; }) : null,
       routeMsg: st.routeMsg || null,
+      pu: (() => {
+        const dd = this.days(), ymd = st.day === 'tomorrow' ? dd.tomorrow : dd.today, list = this.pickupsForDay(), f = st.puForm;
+        const left = list.filter(p => !p.done).length;
+        return { sub: list.length ? left + ' of ' + list.length + ' to pick up · shown first on the route' : 'Transfers from a store (or any address) to pick up before the deliveries.',
+          addLabel: f ? 'Cancel' : '+ Add pickup', addBg: f ? '#fff' : 'oklch(0.5 0.17 300)', addFg: f ? 'oklch(0.5 0.17 300)' : '#fff',
+          toggle: () => this.setState({ puForm: f ? null : { address: '', store: '', items: '', invoice: '' }, puMsg: '', puDel: null }),
+          rows: list.map(p => ({ items: p.items || 'Pickup', strike: p.done ? 'line-through' : 'none',
+            where: (p.store ? 'Store ' + p.store + ' · ' : '') + p.address,
+            forText: p.inv ? 'For ' + (p.inv.stop ? 'stop ' + p.inv.stop + ' · ' : '') + (p.inv.customer || '') + ' · ' + p.inv.id : p.invoice ? 'For invoice ' + p.invoice : (p.drv ? 'Driver: ' + p.drv : 'No invoice'),
+            btn: p.done ? 'Undo' : 'Picked up', btnBg: p.done ? '#6b675e' : C.pu, toggle: () => this.pickupDone([p.id], !p.done),
+            rmLabel: st.puDel === p.id ? 'Tap again' : 'Remove', rmFg: st.puDel === p.id ? C.red : '#55524a',
+            remove: () => { if (st.puDel === p.id) { this.setState({ puDel: null }); return this.pickupRemove(p.id); } this.setState({ puDel: p.id }); } })),
+          form: f ? { dayText: ymdToUs(ymd), address: f.address, items: f.items, invoice: f.invoice,
+            hasStores: d.stores.length > 0, stores: d.stores.map(x => { const on = f.store === x.num; return { label: 'Store ' + x.num, bg: on ? C.pu : '#fff', fg: on ? '#fff' : C.pu, pick: () => this.setState({ puForm: { ...f, store: on ? '' : x.num, address: on ? '' : x.address } }) }; }),
+            onAddress: e => this.setState({ puForm: { ...st.puForm, address: e.target.value, store: '' } }), onItems: e => this.setState({ puForm: { ...st.puForm, items: e.target.value } }),
+            onInvoice: e => this.setState({ puForm: { ...st.puForm, invoice: e.target.value } }),
+            invOpts: [{ v: '', label: 'None' }].concat(Array.from(d.invoices.values()).filter(o => !o.comeback && o.ymd === ymd).sort((a, b) => (+a.stop || 999) - (+b.stop || 999)).map(o => ({ v: o.id, label: (o.stop ? 'Stop ' + o.stop + ' · ' : '') + (o.customer || '') + ' · ' + o.id }))),
+            save: () => this.pickupAdd() } : null,
+          msg: st.puMsg || '', msgFg: /^Not saved|^Type/.test(st.puMsg || '') ? C.red : C.green };
+      })(),
       routeStops, routeSel, fullRouteUrl, fullRouteLabel, chargePlan, hasChargeNav: !!(chargePlan && chargePlan.nav), hasChargeUrl: !!(chargePlan && chargePlan.url),
       routeStatus: !rl.length ? '' : pendingGeo ? 'Placing stops on map… ' + located + '/' + rl.length : missing ? located + ' of ' + rl.length + ' stops on map · ' + missing + ' address' + (missing > 1 ? 'es' : '') + ' not found' : rl.length + ' stops · tap a stop to navigate',
       retryMissing: () => { const g2 = { ...st.geo }; Object.keys(g2).forEach(k => { if (g2[k] === 'x') delete g2[k]; }); this.setState({ geo: g2 }); },
