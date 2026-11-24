@@ -24,10 +24,15 @@ service cloud.firestore {
       allow read: if member();
       allow write: if admin();
     }
+    // Store list (store number -> address): everyone reads, admins (and the sheet copy) write.
+    match /stores/{id} {
+      allow read: if member();
+      allow write: if admin();
+    }
     // Day-to-day data: any active team member.
     match /{col}/{id} {
       allow read, write: if member() && col in ['invoices', 'items', 'upcs', 'servicesold', 'services', 'chargers',
-        'deliveries', 'proofs', 'comebacks', 'log', 'locations'];
+        'deliveries', 'proofs', 'comebacks', 'log', 'locations', 'pickups'];
     }
   }
 }

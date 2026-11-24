@@ -40,6 +40,12 @@ One-time setup (about 15 minutes, on a computer):
 6. Send that block to Claude to build it into the app (then no phone needs any setup), or paste it in the app under **Settings → Switch to Firebase** to try it on one phone first.
 7. In the app: **Set up the admin account** (your name + PIN) → **Settings → Copy from Google Sheets** → **Team → Drivers & PINs** to add each driver.
 
+Getting sheet rows into Firebase (the run-sheet import writes to the sheet):
+- **Automatic (recommended):** in the sheet, reload, then menu **Scan-Check → Set up Firebase auto-push** and enter an admin name + PIN. Every 10 minutes new or changed rows (Invoice, InvoiceItems, ServicesSold, Services, UPCS, Chargers, stores, PICKUPS) are copied to Firebase. Google asks once to allow the script to connect to an external service.
+- **From an admin phone:** Settings → Copy from Google Sheets turns on auto-sync every 5 minutes while the app is open.
+- A driver or stop set in the app is never overwritten; a note typed in the app is kept unless the sheet has a note for that invoice; a pickup is copied once, then "picked up" is kept in the app.
+- Changes made in the app (scans, deliveries, services, notes, pickups) stay in Firebase and are not written back to the sheet.
+
 Notes:
 - The firebaseConfig values are not secret; access is controlled by sign-in and `firestore.rules`.
 - Delivery photos and signatures are stored in Firestore (`proofs`), so the free Spark plan is enough; no Cloud Storage needed.

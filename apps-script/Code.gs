@@ -418,3 +418,150 @@ function doPost(e) {
   if (!body.action) body.action = 'log';
   return respond_(handle_(body));
 }
+
+// ---------- automatic push: sheet → Firebase ----------
+// Every 10 minutes, new or changed rows in Invoice, InvoiceItems, ServicesSold, Services, UPCS, Chargers, stores and PICKUPS
+// are copied to Firebase, so the app updates even when nobody has it open.
+// Set up once: reload the sheet, then menu Scan-Check → "Set up Firebase auto-push" and enter your app name + PIN.
+// Like the in-app copy: a driver or stop set in the app is never overwritten, a note typed in the app is only replaced
+// when the sheet has a note for that invoice, and a pickup is only copied once ("picked up" is kept in the app).
+const FB_PROJECT = 'scanner-5ec16';
+const FB_KEY = 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk';
+
+const FB_HASH_TAB = 'FB SYNC';
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('Scan-Check')
+    .addItem('Set up Firebase auto-push', 'setupFirebasePush')
+    .addItem('Push to Firebase now', 'pushNowMenu_')
+    .addItem('Firebase push status', 'pushStatusMenu_')
+    .addItem('Turn off auto-push', 'stopFirebasePush')
+    .addToUi();
+}
+
+function setupFirebasePush() {
+  const ui = SpreadsheetApp.getUi(), P = PropertiesService.getScriptProperties();
+  const n = ui.prompt('Firebase auto-push', 'Your name as you sign in to the app (an admin, e.g. KJ):', ui.ButtonSet.OK_CANCEL);
+  if (n.getSelectedButton() !== ui.Button.OK || !n.getResponseText().trim()) return;
+  const p = ui.prompt('Firebase auto-push', 'Your app PIN:', ui.ButtonSet.OK_CANCEL);
+  if (p.getSelectedButton() !== ui.Button.OK || !p.getResponseText().trim()) return;
+  P.setProperties({ FB_NAME: n.getResponseText().trim(), FB_PIN: p.getResponseText().trim() });
+  try { fbToken_(true); } catch (e) { ui.alert('Could not sign in to Firebase: ' + e.message + '\nCheck the name and PIN you use in the app, then try again.'); return; }
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'pushToFirebase').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('pushToFirebase').timeBased().everyMinutes(10).create();
+  const r = pushToFirebase();
+  ui.alert('Auto-push is on (every 10 minutes).\n\nFirst push: ' + r);
+}
+function stopFirebasePush() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'pushToFirebase').forEach(t => ScriptApp.deleteTrigger(t));
+  SpreadsheetApp.getUi().alert('Auto-push is off.');
+}
+function pushNowMenu_() { SpreadsheetApp.getUi().alert(pushToFirebase()); }
+function pushStatusMenu_() {
+  const P = PropertiesService.getScriptProperties(), on = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'pushToFirebase');
+  SpreadsheetApp.getUi().alert('Auto-push is ' + (on ? 'ON (every 10 minutes)' : 'OFF') + '.\nLast run: ' + (P.getProperty('FB_LAST') || 'never'));
+}
+
+const fbIdGs_ = s => (String(s == null ? '' : s).trim().replace(/[\/#\[\]?*]/g, '_').replace(/^\.+$/, '_').slice(0, 300)) || '_';
+function pickGs_(row, res) {
+  const ks = Object.keys(row);
+  for (const r of res) { const k = ks.find(k => r.test(k)); if (k) return String(row[k] == null ? '' : row[k]).trim(); }
+  return '';
+}
+
+function fbToken_(fresh) {
+  const P = PropertiesService.getScriptProperties(), C = CacheService.getScriptCache();
+  if (!fresh) { const t = C.get('fb_tok'); if (t) return t; }
+  const name = P.getProperty('FB_NAME'), pin = P.getProperty('FB_PIN');
+  if (!name || !pin) throw new Error('not set up — use Scan-Check → Set up Firebase auto-push');
+  const email = 'driver-' + (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x') + '@scancheck.app';
+  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB_KEY, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ email: email, password: 'scanchk-' + pin, returnSecureToken: true })
+  });
+  const j = JSON.parse(r.getContentText() || '{}');
+  if (!j.idToken) throw new Error(((j.error && j.error.message) || 'sign-in failed').replace(/_/g, ' ').toLowerCase());
+  C.put('fb_tok', j.idToken, 3000);
+  return j.idToken;
+}
+
+// The same document ids the app uses when it copies from the sheet.
+function fbDocs_(ss) {
+  const d = allData_(ss, null), docs = {}, cnt = {};
+  const put = (col, id, row, keep, once) => { docs[col + '/' + id] = { col: col, id: id, row: row, keep: keep, once: once }; };
+  const dup = k => { cnt[k] = (cnt[k] || 0) + 1; return fbIdGs_(k + (cnt[k] > 1 ? '#' + cnt[k] : '')); };
+  d.invoices.forEach(r => { const id = invId_(r); if (!id) return; const row = Object.assign({}, r, { Invoice: id }); put('invoices', fbIdGs_(id), row, true); });
+  d.items.forEach(r => { const id = invId_(r), m = pickGs_(r, [/model/i, /sku/i, /part/i, /item/i]); if (id && m) put('items', dup(id + '|' + m.toUpperCase()), r); });
+  d.upcs.forEach(r => { const u = pickGs_(r, [/upc/i, /barcode/i, /ean/i, /code/i]); if (u.replace(/\D/g, '').replace(/^0+/, '')) put('upcs', fbIdGs_(u.replace(/\D/g, '')), r); });
+  d.servicesold.forEach(r => { const id = pickGs_(r, [/^id$/i]); put('servicesold', id ? fbIdGs_(id) : dup('svc|' + JSON.stringify(r)), r); });
+  d.services.forEach(r => { const c = pickGs_(r, [/code/i, /id$/i, /sku/i, /serv/i]); if (c) put('services', fbIdGs_(c), r); });
+  d.chargers.forEach(r => put('chargers', dup('ch|' + (pickGs_(r, [/name|title/i]) || JSON.stringify(r))), r));
+  d.stores.forEach(r => { const n = pickGs_(r, [/^srt/i, /store|^no\b|num|#/i]).replace(/\D/g, '').replace(/^0+(?=\d)/, ''); if (n) put('stores', fbIdGs_(n), r); });
+  d.pickups.forEach(r => { const id = pickGs_(r, [/^id$/i]); if (id) put('pickups', fbIdGs_(id), r, false, true); });
+  return docs;
+}
+
+const fbPath_ = k => /^[A-Za-z_][A-Za-z0-9_]*$/.test(k) ? k : '`' + k.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`';
+function fbFields_(row, skip) {
+  const f = {};
+  Object.keys(row).forEach(k => { if (k && !(skip && skip(k))) f[k] = { stringValue: String(row[k] == null ? '' : row[k]) }; });
+  return f;
+}
+
+function pushToFirebase() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return 'Skipped: another push is running.';
+  const P = PropertiesService.getScriptProperties();
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet(), docs = fbDocs_(ss);
+    let hs = ss.getSheetByName(FB_HASH_TAB);
+    if (!hs) { hs = ss.insertSheet(FB_HASH_TAB); hs.hideSheet(); hs.getRange(1, 1, 1, 2).setValues([['Doc', 'Hash']]); }
+    const old = {}, hv = hs.getLastRow() > 1 ? hs.getRange(2, 1, hs.getLastRow() - 1, 2).getValues() : [];
+    hv.forEach(r => old[r[0]] = r[1]);
+    const hash = o => Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, JSON.stringify(o), Utilities.Charset.UTF_8));
+    const changed = [], now = {};
+    Object.keys(docs).forEach(k => { now[k] = hash(docs[k].row); if (old[k] !== now[k]) changed.push(docs[k]); });
+    if (!changed.length) { P.setProperty('FB_LAST', new Date().toLocaleString() + ' — up to date'); return 'Up to date — nothing new in the sheet.'; }
+    const base = 'projects/' + FB_PROJECT + '/databases/(default)/documents/';
+    const keepK = row => k => /driver/i.test(k) || /^\s*stop/i.test(k) || (/^\s*notes?\s*$/i.test(k) && !String(row[k] == null ? '' : row[k]).trim());
+    const creates = [], writes = [];
+    changed.forEach(c => {
+      const name = base + c.col + '/' + c.id;
+      if (c.once) creates.push({ update: { name: name, fields: fbFields_(c.row) }, currentDocument: { exists: false } });
+      else if (c.keep) {
+        // new invoice: create it with its driver and stop; existing invoice: update everything except driver and stop
+        creates.push({ update: { name: name, fields: fbFields_(c.row) }, currentDocument: { exists: false } });
+        const f = fbFields_(c.row, keepK(c.row));
+        writes.push({ update: { name: name, fields: f }, updateMask: { fieldPaths: Object.keys(f).map(fbPath_) } });
+      } else writes.push({ update: { name: name, fields: fbFields_(c.row) } });
+    });
+    const tok = fbToken_();
+    const send = list => {
+      let fails = 0;
+      for (let i = 0; i < list.length; i += 400) {
+        const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/' + base.replace(/\/$/, '') + ':batchWrite', {
+          method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+          headers: { Authorization: 'Bearer ' + tok }, payload: JSON.stringify({ writes: list.slice(i, i + 400) })
+        });
+        if (r.getResponseCode() !== 200) throw new Error('Firebase said ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 200));
+        (JSON.parse(r.getContentText()).status || []).forEach(s => { if (s.code) fails++; });
+      }
+      return fails;
+    };
+    send(creates);              // fails harmlessly for invoices that already exist
+    const bad = send(writes);
+    if (bad) throw new Error(bad + ' rows were refused — is your app account an active member?');
+    const out = Object.keys(now).map(k => [k, now[k]]);
+    hs.getRange(2, 1, Math.max(hs.getLastRow() - 1, 1), 2).clearContent();
+    if (out.length) hs.getRange(2, 1, out.length, 2).setValues(out);
+    const newInv = changed.filter(c => c.keep).length;
+    const msg = changed.length + ' new or changed rows pushed' + (newInv ? ' (' + newInv + ' invoice' + (newInv === 1 ? '' : 's') + ')' : '') + '.';
+    P.setProperty('FB_LAST', new Date().toLocaleString() + ' — ' + msg);
+    return msg;
+  } catch (e) {
+    CacheService.getScriptCache().remove('fb_tok');
+    const msg = 'Push failed: ' + e.message;
+    P.setProperty('FB_LAST', new Date().toLocaleString() + ' — ' + msg);
+    return msg;
+  } finally { lock.releaseLock(); }
+}

@@ -69,7 +69,7 @@ const TRAIN_DATA = me => { if (me.role === 'admin') return SAMPLE; const mine = 
   return { ...SAMPLE, invoices: mine, items: SAMPLE.items.filter(r => ids[r.Invoice]), servicesold: SAMPLE.servicesold.filter(r => ids[r.InvoiceNumber]), drivers: [], locations: [] }; };
 `;
 rep(/const SAMPLE = \{[\s\S]*?\n\};\n/, SAMPLE, 'SAMPLE');
-if (!/const FIREBASE_CONFIG = null;/.test(h)) rep(/const FIREBASE_CONFIG = \{[\s\S]*?\n\};/, 'const FIREBASE_CONFIG = null;', 'FIREBASE_CONFIG');
+if (!/const FIREBASE_CONFIG = null;/.test(h)) rep(/const FIREBASE_CONFIG = (?:\{[\s\S]*?\n\}|FIREBASE_PROJECT);/, 'const FIREBASE_CONFIG = null;', 'FIREBASE_CONFIG');
 rep('url: SHEET_URL0, urlDraft: SHEET_URL0,', "url: '', urlDraft: '',", 'url state');
 rep('demo: !SHEET_URL0,', 'demo: true,', 'demo state');
 rep("const api = qs.get('api');", 'const api = null;', 'api param');
