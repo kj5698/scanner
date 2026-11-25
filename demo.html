@@ -360,6 +360,30 @@ input{font:inherit}
           </sc-for>
         </div>
         <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#55524a;text-align:center">{{ scanSummary }}</div>
+        <sc-if value="{{ truck }}" hint-placeholder-val="{{ false }}">
+          <div style="border-radius:12px;border:2px solid {{ truck.border }};background:{{ truck.bg }};padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+            <button onClick="{{ truck.toggle }}" style="display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:15px;color:{{ truck.fg }}">{{ truck.title }}</div>
+                <div style="font-size:12px;color:#55524a;margin-top:2px">{{ truck.sub }}</div>
+              </div>
+              <div style="font:600 12px 'IBM Plex Sans';color:{{ truck.fg }}">{{ truck.more }}</div>
+            </button>
+            <sc-if value="{{ truck.open }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ truck.rows }}" as="tr" hint-placeholder-count="2">
+                  <button onClick="{{ tr.pick }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid {{ tr.border }};background:#fff;text-align:left;cursor:pointer;font:inherit;color:inherit">
+                    <div style="min-width:44px;font:700 12px 'IBM Plex Mono';color:#55524a">{{ tr.stop }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font:600 14px 'IBM Plex Mono';color:{{ tr.fg }}">{{ tr.what }}</div>
+                      <div style="font-size:12px;color:#6b675e">{{ tr.who }}</div>
+                    </div>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
         <div style="background:#1c1b18;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:10px">
           <div style="position:relative;width:100%;height:{{ readerH }};border-radius:10px;overflow:hidden;background:#2a2925">
             <div id="reader" style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);width:100%"></div>
@@ -1391,7 +1415,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.8.0', APP_BUILD = '2026-11-23';
+const APP_VERSION = '2.8.1', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -3272,6 +3296,25 @@ class Component extends DCLogic {
         return { tiles, periods, pays, rows, sortOpts, sortVal: st.salesSort, onSort: e => { saveSort('scanchk.salesSort', e.target.value); this.setState({ salesSort: e.target.value }); }, q: st.salesQ, onQ: e => this.setState({ salesQ: e.target.value }),
           listTitle: names[st.salesPeriod] + (st.salesPay === 'All' ? '' : ' · ' + st.salesPay.toLowerCase()) + ' · ' + list.length + ' invoice' + (list.length === 1 ? '' : 's'),
           listTotal: usd(sum(list)), empty: !list.length, emptyText: all.length ? 'No invoices match.' : 'No invoices yet.' };
+      })(),
+      truck: (() => {
+        // Truck check: every piece of the day's invoices, so nothing is left behind when loading
+        if (auth || st.mode !== 'load' || st.locked) return null;
+        const day = Array.from(d.invoices.values()).filter(o => this.inDay(o) && !o.waiting && !o.pickup);
+        if (!day.length) return null;
+        const rows = []; let tot = 0, got = 0;
+        day.forEach(o => {
+          const s = this.status(o), sc = this.scanned(o.id, 'load'), ms = Object.keys(o.items || {});
+          const stop = o.stop ? '#' + o.stop : '—', who = (o.customer || 'No customer') + ' · ' + o.id + (isAdmin && o.driver ? ' · ' + o.driver : ''), pick = () => this.lock(o.id);
+          if (!ms.length && !o.comeback && !o.visitFrom && s.st !== 'Complete') { rows.push({ k: +o.stop || 999, stop, what: 'No pieces in the app', who: who + ' — check the run sheet; copy from Google Sheets if pieces are missing', fg: C.red, border: C.red, pick, warn: 1 }); return; }
+          ms.forEach(m => { const q = o.items[m], g = Math.min(sc[m] || 0, q); tot += q; got += g; if (g < q && s.st !== 'Complete') rows.push({ k: +o.stop || 999, stop, what: m + (q - g > 1 ? ' × ' + (q - g) : ''), who, fg: '#1c1b18', border: '#e2dfd7', pick }); });
+        });
+        rows.sort((a, b) => (b.warn || 0) - (a.warn || 0) || a.k - b.k);
+        const left = rows.filter(r => !r.warn).length, warns = rows.filter(r => r.warn).length, done = !rows.length, open = done ? false : st.truckOpen !== false;
+        return { title: done ? '✓ Truck check: all ' + tot + ' pieces scanned' : (warns ? '⚠ ' : '') + 'Truck check: ' + got + ' of ' + tot + ' pieces scanned',
+          sub: done ? (isAdmin ? 'Every invoice for this day' : 'All your invoices for this day') + ' · ' + day.length + ' invoice' + (day.length === 1 ? '' : 's') : (left ? left + ' piece' + (left === 1 ? '' : 's') + ' not scanned yet' : '') + (left && warns ? ' · ' : '') + (warns ? warns + ' invoice' + (warns === 1 ? '' : 's') + ' with no pieces in the app' : '') + (isAdmin ? '' : ' · your invoices only'),
+          bg: done ? 'oklch(0.96 0.04 150)' : warns ? 'oklch(0.96 0.03 25)' : '#fff', border: done ? 'oklch(0.6 0.13 150)' : warns ? C.red : '#1c1b18', fg: done ? 'oklch(0.4 0.12 150)' : warns ? C.red : '#1c1b18',
+          open, more: done ? '' : open ? 'Hide' : 'Show', toggle: () => this.setState({ truckOpen: !open }), rows };
       })(),
       scanSummary: st.mode === 'deliver' ? (cnt('Ready') + cnt('Loaded')) + ' to deliver · ' + cnt('Delivering') + ' delivering · ' + cnt('Complete') + ' delivered' : cnt('Open') + ' open · ' + cnt('Partial') + ' loading · ' + cnt('Ready') + ' ready · ' + cnt('Loaded') + ' loaded',
       proof,
