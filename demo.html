@@ -1430,7 +1430,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.9.1', APP_BUILD = '2026-11-25';
+const APP_VERSION = '2.9.2', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -2015,7 +2015,7 @@ class Component extends DCLogic {
         } else {
           const j = await this.sheetCall(url, { ...p, fbToken: tok });
           if (!j) throw new Error('no answer');
-          if (j.invoices) throw new Error('your Google Script is an older version: paste the new Code.gs and deploy a New version');
+          if (j.invoices || (j.ok === false && j.auth)) throw new Error('the Google Script on this link is still the old version: paste the new Code.gs, run authorize, then Deploy → Manage deployments → Edit → New version');
           if (j.ok === false) {
             if (/sign in|token|not allowed/i.test(j.error || '')) throw new Error(j.error);
             this.mirrorSkipped = (this.mirrorSkipped || 0) + 1; // e.g. a row the sheet doesn't have: skip it, keep going
