@@ -98,6 +98,12 @@ input{font:inherit}
         </div>
         <button onClick="{{ mirror.retry }}" style="height:36px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Send now</button>
       </div>
+      <sc-if value="{{ mirror.canBack }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:8px 16px 0;padding:10px 14px;border-radius:12px;border:1px solid #e2dfd7;background:#fff;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px;font-size:12px;color:#55524a;line-height:1.4">{{ mirror.backText }}</div>
+          <button onClick="{{ mirror.back }}" style="height:36px;padding:0 12px;border:none;border-radius:8px;background:#1c1b18;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer">{{ mirror.backBtn }}</button>
+        </div>
+      </sc-if>
     </sc-if>
     <div style="margin:12px 16px 0;padding:16px;background:#fff;border:1px solid #e2dfd7;border-radius:12px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
@@ -1408,7 +1414,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.9.0', APP_BUILD = '2026-11-25';
+const APP_VERSION = '2.9.1', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -1965,6 +1971,15 @@ class Component extends DCLogic {
     catch (e) { // phone storage full (photos): keep the record, drop the pictures
       try { localStorage.setItem('scanchk.mirror', JSON.stringify(q.slice(-3000).map(x => x.action === 'proof' ? { ...x, photo: '', signature: '', note: 'photo and signature kept in the app' } : x))); return true; } catch (e2) { return false; }
     }
+  }
+  backfillScans(days) {
+    const F = this.fbData || {}, from = Date.now() - days * 864e5;
+    const rows = (F.log || []).map(r => ({ ts: Date.parse(r.Timestamp), invoice: r.Invoice || '', upc: r.UPC || '', model: r.Model || '', result: r.Result || '', device: r.Device || '', driver: r.Driver || '' }))
+      .filter(r => r.ts && r.ts >= from).sort((a, b) => a.ts - b.ts);
+    if (!rows.length) return this.setState({ backMsg: 'No scans in Firebase for the last ' + days + ' days.' });
+    for (let i = 0; i < rows.length; i += 15) this.mirrorAdd({ action: 'logBackfill', rows: JSON.stringify(rows.slice(i, i + 15)) });
+    this.setState({ backBusy: true, backMsg: rows.length + ' scans queued for the sheet. Watch "Sheet copy" above until it says up to date.' });
+    setTimeout(() => this.setState({ backBusy: false }), 4000);
   }
   mirrorAdd(p) {
     const q = this.mirrorGet(); q.push({ ...p, at: new Date().toISOString() }); this.mirrorPut(q);
@@ -3351,7 +3366,10 @@ class Component extends DCLogic {
         return { title: n ? (bad ? '⚠ ' : '') + 'Sheet copy: ' + n + ' change' + (n === 1 ? '' : 's') + ' waiting' : '✓ Sheet copy: up to date',
           sub: bad ? 'Not reaching the Google Sheet (' + st.mirrorErr + '). Kept on this phone and retried every minute.' : (t ? 'Last sent ' + t + '. ' : '') + 'Scans, deliveries, notes, come-backs and service changes are also written to the claapp sheet.',
           bg: bad ? 'oklch(0.96 0.03 25)' : n ? '#fff' : 'oklch(0.96 0.04 150)', border: bad ? C.red : n ? '#d6d2c8' : 'oklch(0.6 0.13 150)', fg: bad ? C.red : n ? '#1c1b18' : 'oklch(0.4 0.12 150)',
-          retry: () => this.mirrorFlush() };
+          retry: () => this.mirrorFlush(),
+          canBack: !!(st.me && st.me.role === 'admin'), backBtn: st.backBusy ? 'Queued…' : 'Copy last 7 days of scans',
+          backText: st.backMsg || 'Scans made before the sheet copy started are only in Firebase. This copies the last 7 days of scans (all drivers) to the SCAN LOG. Scans already in the sheet are skipped, so it is safe to press again.',
+          back: () => this.backfillScans(7) };
       })() : null,
       truck: (() => {
         // Truck check: every piece of the day's invoices, so nothing is left behind when loading

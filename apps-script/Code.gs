@@ -140,17 +140,22 @@ function allData_(ss, u) {
   return out;
 }
 
-function writeLog_(ss, rows, u) {
+function writeLog_(ss, rows, u, skipDupes) {
   let sh = findSheet_(ss, [LOG_NAME]);
   if (!sh) {
     sh = ss.insertSheet(LOG_NAME);
     sh.appendRow(['Timestamp', 'Invoice', 'UPC', 'Model', 'Result', 'Device', 'Driver']);
   }
   const dc = ensureCol_(sh, 'Driver'), w = Math.max(6, dc);
+  if (skipDupes) { // copying older scans: leave out rows the SCAN LOG already has (same time, invoice, UPC and result)
+    const have = {}, key = (t, inv, upc, res) => [t, String(inv).trim(), String(upc).replace(/^'/, '').trim(), String(res).trim()].join('|');
+    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(r => { const t = r[0] instanceof Date ? r[0].getTime() : Date.parse(r[0]); have[key(t, r[1], r[2], r[4])] = 1; });
+    rows = (rows || []).filter(r => !have[key(new Date(r.ts).getTime(), r.invoice || '', r.upc || '', r.result || '')]);
+  }
   const vals = (rows || []).map(r => {
     const a = [new Date(r.ts || Date.now()), r.invoice || '', "'" + (r.upc || ''), r.model || '', r.result || '', r.device || ''];
     while (a.length < w) a.push('');
-    a[dc - 1] = u ? u.name : '';
+    a[dc - 1] = (skipDupes && r.driver) || (u ? u.name : '');
     return a;
   });
   if (vals.length) sh.getRange(sh.getLastRow() + 1, 1, vals.length, w).setValues(vals);
@@ -407,7 +412,7 @@ function handle_(p) {
       // a change made in the app while it runs on Firebase, copied here; signed with the Firebase sign-in
       u = fbUser_(p.fbToken);
       if (!u) return { ok: false, error: 'Firebase sign-in not accepted (token). Sign out and in again in the app.' };
-      if (['log', 'note', 'service', 'comeback', 'upsertUpc', 'assign', 'stops', 'pickup', 'proof'].indexOf(p.action) < 0) return { ok: false, error: 'Not allowed for Firebase copies.' };
+      if (['log', 'logBackfill', 'note', 'service', 'comeback', 'upsertUpc', 'assign', 'stops', 'pickup', 'proof'].indexOf(p.action) < 0) return { ok: false, error: 'Not allowed for Firebase copies.' };
     } else if (on) {
       u = user_(ss, p);
       if (!u) return { ok: false, auth: true, error: 'Please sign in again.' };
@@ -418,6 +423,7 @@ function handle_(p) {
     if (p.action === 'proof') return proof_(ss, p, u);
     if (p.action === 'hasProof') return hasProof_(ss, p);
     if (p.action === 'log') return writeLog_(ss, JSON.parse(p.rows || '[]'), u);
+    if (p.action === 'logBackfill') return writeLog_(ss, JSON.parse(p.rows || '[]'), u, true);
     if (p.action === 'loc') return loc_(ss, p, u);
     if (p.action === 'assign') return admin ? assign_(ss, p) : { ok: false, error: 'Only admins can reassign invoices.' };
     if (p.action === 'comeback') return comeback_(ss, p, u);
