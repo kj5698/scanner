@@ -1430,7 +1430,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.9.3', APP_BUILD = '2026-11-25';
+const APP_VERSION = '2.9.4', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -1452,7 +1452,8 @@ const todayYmd = () => { const t = new Date(), p2 = n => String(n).padStart(2, '
 const loadScript = src => new Promise((ok, bad) => { if (document.querySelector('script[data-src="' + src + '"]')) return ok(); const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.setAttribute('data-src', src); sc.onload = ok; sc.onerror = () => bad(new Error('Could not load ' + src.split('/').pop())); document.head.appendChild(sc); });
 // The company's Google Script link (Apps Script web app). Phones use it when nothing else is saved, and switch to it if their saved link stops working.
 const MIRROR_ACTIONS = ['log', 'note', 'service', 'comeback', 'upsertUpc', 'assign', 'stops', 'pickup'];
-const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxITzdmXZxQqSZSvUYltLkmngYFcRjNPtx5vVA4pC_3cTLomdZNRTcwREo3lUusrlBo/exec';
+const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzLEkVULIHFBfBm953A9QCK2H5811ncVycRb6RfFS6Nn7s7Aq59xeSxgegxuApL-Ww/exec';
+const SHEET_URL_OLD = ['https://script.google.com/macros/s/AKfycbxITzdmXZxQqSZSvUYltLkmngYFcRjNPtx5vVA4pC_3cTLomdZNRTcwREo3lUusrlBo/exec'];
 const SHEET_URL0 = (() => { try { const u = localStorage.getItem('scanchk.url'); if (u) return u; const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'), v = c && c.url; if (v && /^https:\/\/script\.google/.test(v)) { localStorage.setItem('scanchk.url', v); return v; } } catch (e) {} return SHEET_URL_DEFAULT; })();
 const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; if (lsGet('scanchk.fbon', '') !== '1') return null; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
 function parseFbConfig(txt) {
@@ -1981,8 +1982,8 @@ class Component extends DCLogic {
   // Firebase sign-in. Changes wait on this phone until the sheet takes them, and are retried every minute.
   mirrorUrls() { // every Google Script link this phone knows, the one that worked last first
     const L = []; const add = u => { if (u && /^https:\/\/script\.google/.test(u) && L.indexOf(u) < 0) L.push(u); };
-    try { add(localStorage.getItem('scanchk.mirrorUrl')); add(localStorage.getItem('scanchk.url')); const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'); add(c && c.url); } catch (e) {}
-    add(SHEET_URL_DEFAULT); add(SHEET_URL0); return L;
+    try { add(localStorage.getItem('scanchk.mirrorUrl')); add(SHEET_URL_DEFAULT); add(localStorage.getItem('scanchk.url')); const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'); add(c && c.url); } catch (e) {}
+    add(SHEET_URL_DEFAULT); add(SHEET_URL0); SHEET_URL_OLD.forEach(add); return L;
   }
   mirrorUrl() { return this.mirrorUrls()[0] || ''; }
   mirrorGet() { try { return JSON.parse(localStorage.getItem('scanchk.mirror') || '[]'); } catch (e) { return []; } }
