@@ -194,14 +194,15 @@ function service_(ss, p) {
     let max = 0;
     for (let i = 1; i < v.length; i++) { const n = parseFloat(v[i][cId]); if (!isNaN(n) && n > max) max = n; }
     const row = h.map(() => '');
-    row[cId] = max + 1;
+    const nid = p.newId && !v.slice(1).some(r => String(r[cId]).trim() === String(p.newId).trim()) ? String(p.newId) : String(max + 1);
+    row[cId] = nid;
     if (cInv > -1) row[cInv] = p.invoice;
     if (cS > -1) row[cS] = p.serviceId;
     if (cA > -1) row[cA] = p.amount || '';
     if (cD > -1) row[cD] = new Date();
     if (cSt > -1) row[cSt] = p.status || '';
     sh.appendRow(row);
-    return { ok: true, id: String(max + 1) };
+    return { ok: true, id: nid };
   }
   for (let i = 1; i < v.length; i++) {
     if (String(v[i][cId]).trim() !== String(p.id).trim()) continue;
@@ -365,7 +366,24 @@ function comeback_(ss, p, u) {
   return { ok: true, id };
 }
 
+// Checks a Firebase sign-in sent by the app (app on Firebase) and returns the person: { name, role }.
+const FB_API_KEY = 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk';
+function fbUser_(tok) {
+  const c = CacheService.getScriptCache(), k = 'fbt_' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, tok)).slice(0, 22);
+  const hit = c.get(k); if (hit) return JSON.parse(hit);
+  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + FB_API_KEY, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ idToken: tok })
+  });
+  if (r.getResponseCode() !== 200) return null;
+  const us = (JSON.parse(r.getContentText()).users || [])[0], m = us && String(us.email || '').match(/^driver-(.+)@scancheck\.app$/i);
+  if (!m || us.disabled) return null;
+  const u = { name: m[1].replace(/-/g, ' ').toUpperCase(), role: 'admin' };
+  c.put(k, JSON.stringify(u), 1800);
+  return u;
+}
+
 function authorize() {
+  UrlFetchApp.fetch('https://www.googleapis.com/discovery/v1/apis', { muteHttpExceptions: true });
   DriveApp.createFolder('scanner-permission-test').setTrashed(true);
   PropertiesService.getScriptProperties().getKeys();
   CacheService.getScriptCache().get('x');
@@ -385,7 +403,12 @@ function handle_(p) {
     if (p.action === 'config') return { ok: true, config: true, auth: on, drivers: on ? drivers_(ss).filter(d => d.pin).map(d => d.name) : [] };
     if (p.action === 'login') return login_(ss, p);
     let u = null;
-    if (on) {
+    if (p.fbToken) {
+      // a change made in the app while it runs on Firebase, copied here; signed with the Firebase sign-in
+      u = fbUser_(p.fbToken);
+      if (!u) return { ok: false, error: 'Firebase sign-in not accepted (token). Sign out and in again in the app.' };
+      if (['log', 'note', 'service', 'comeback', 'upsertUpc', 'assign', 'stops', 'pickup', 'proof'].indexOf(p.action) < 0) return { ok: false, error: 'Not allowed for Firebase copies.' };
+    } else if (on) {
       u = user_(ss, p);
       if (!u) return { ok: false, auth: true, error: 'Please sign in again.' };
     }

@@ -108,6 +108,15 @@ input{font:inherit}
       <div style="flex:1;font-weight:600;font-size:20px;letter-spacing:-0.01em">Settings</div>
       <button onClick="{{ toggleSettings }}" style="height:38px;padding:0 14px;border:none;background:#1c1b18;color:#fff;border-radius:8px;font:500 13px 'IBM Plex Sans';cursor:pointer">Done</button>
     </div>
+    <sc-if value="{{ mirror }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:12px 16px 0;padding:12px 14px;border-radius:12px;border:2px solid {{ mirror.border }};background:{{ mirror.bg }};display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:{{ mirror.fg }}">{{ mirror.title }}</div>
+          <div style="font-size:12px;color:#55524a;line-height:1.4;margin-top:2px">{{ mirror.sub }}</div>
+        </div>
+        <button onClick="{{ mirror.retry }}" style="height:36px;padding:0 12px;border:1px solid #d6d2c8;border-radius:8px;background:#fff;font:500 13px 'IBM Plex Sans';color:#1c1b18;cursor:pointer">Send now</button>
+      </div>
+    </sc-if>
     <div style="margin:12px 16px 0;padding:16px;background:#fff;border:1px solid #e2dfd7;border-radius:12px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid #eeebe4">
         <div style="font-weight:600;font-size:14px">Google Maps (optional)</div>
@@ -1415,7 +1424,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.8.1', APP_BUILD = '2026-11-25';
+const APP_VERSION = '2.9.0', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -1436,6 +1445,7 @@ const fbPass = pin => 'scanchk-' + String(pin).trim();
 const todayYmd = () => { const t = new Date(), p2 = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate()); };
 const loadScript = src => new Promise((ok, bad) => { if (document.querySelector('script[data-src="' + src + '"]')) return ok(); const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.setAttribute('data-src', src); sc.onload = ok; sc.onerror = () => bad(new Error('Could not load ' + src.split('/').pop())); document.head.appendChild(sc); });
 // The company's Google Script link (Apps Script web app). Phones use it when nothing else is saved, and switch to it if their saved link stops working.
+const MIRROR_ACTIONS = ['log', 'note', 'service', 'comeback', 'upsertUpc', 'assign', 'stops', 'pickup'];
 const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxITzdmXZxQqSZSvUYltLkmngYFcRjNPtx5vVA4pC_3cTLomdZNRTcwREo3lUusrlBo/exec';
 const SHEET_URL0 = (() => { try { const u = localStorage.getItem('scanchk.url'); if (u) return u; const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'), v = c && c.url; if (v && /^https:\/\/script\.google/.test(v)) { localStorage.setItem('scanchk.url', v); return v; } } catch (e) {} return SHEET_URL_DEFAULT; })();
 const fbCfg = () => { if (FIREBASE_CONFIG) return FIREBASE_CONFIG; if (lsGet('scanchk.fbon', '') !== '1') return null; try { const c = JSON.parse(lsGet('scanchk.fbconfig', '') || 'null'); return c && c.apiKey && c.projectId ? c : null; } catch (e) { return null; } };
@@ -1526,7 +1536,7 @@ class Component extends DCLogic {
     this.onVis = () => { if (document.visibilityState === 'visible') this.wake = null; this.syncWake(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.syncT = setInterval(() => this.autoSync(), 5 * 60000);
-    this.outT2 = setInterval(() => this.flushOutbox(), 60000);
+    this.outT2 = setInterval(() => { this.flushOutbox(); this.mirrorFlush(); }, 60000);
     this.teamT = setInterval(() => { if (this.state.tab === 'team' && !this.state.demo && !this.state.loading && !this.state.fbMode) this.load(); }, 60000);
     try {
       if (/^https:/.test(location.protocol) && !/claude|anthropic|localhost/.test(location.hostname)) {
@@ -1949,8 +1959,60 @@ class Component extends DCLogic {
   }
 
   call(params) {
-    if (this.state.fbMode) return this.fbCall(params);
+    if (this.state.fbMode) {
+      return this.fbCall(params).then(j => {
+        if (j && j.ok !== false && MIRROR_ACTIONS.indexOf(params.action) > -1 && !this.state.demo) {
+          const m = { ...params }; if (params.action === 'service' && params.op === 'add' && j.id) m.newId = j.id;
+          this.mirrorAdd(m);
+        }
+        return j;
+      });
+    }
     return this.sheetCall(this.state.url, params, this.state.session);
+  }
+  // ---- copy to the Google Sheet while the app runs on Firebase ----
+  // Every change made in the app is also sent to the sheet (through the Google Script link), signed with the
+  // Firebase sign-in. Changes wait on this phone until the sheet takes them, and are retried every minute.
+  mirrorUrl() { try { return localStorage.getItem('scanchk.url') || SHEET_URL0 || SHEET_URL_DEFAULT; } catch (e) { return SHEET_URL_DEFAULT; } }
+  mirrorGet() { try { return JSON.parse(localStorage.getItem('scanchk.mirror') || '[]'); } catch (e) { return []; } }
+  mirrorPut(q) {
+    try { localStorage.setItem('scanchk.mirror', JSON.stringify(q.slice(-3000))); return true; }
+    catch (e) { // phone storage full (photos): keep the record, drop the pictures
+      try { localStorage.setItem('scanchk.mirror', JSON.stringify(q.slice(-3000).map(x => x.action === 'proof' ? { ...x, photo: '', signature: '', note: 'photo and signature kept in the app' } : x))); return true; } catch (e2) { return false; }
+    }
+  }
+  mirrorAdd(p) {
+    const q = this.mirrorGet(); q.push({ ...p, at: new Date().toISOString() }); this.mirrorPut(q);
+    this.setState({ mirrorWaiting: q.length }); this.mirrorFlush();
+  }
+  async mirrorFlush() {
+    if (this.mirroring || !this.state.fbMode || this.state.demo) return;
+    let q = this.mirrorGet(); if (!q.length) return this.setState({ mirrorWaiting: 0 });
+    const url = this.mirrorUrl(); if (!url) return;
+    this.mirroring = true;
+    try {
+      const u = this.fbAuth && this.fbAuth.currentUser; if (!u) throw new Error('not signed in');
+      const tok = await u.getIdToken();
+      while (q.length) {
+        const { at, ...p } = q[0];
+        if (p.action === 'proof') {
+          await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...p, fbToken: tok, device: navigator.userAgent.slice(0, 60) }) });
+        } else {
+          const j = await this.sheetCall(url, { ...p, fbToken: tok });
+          if (!j) throw new Error('no answer');
+          if (j.invoices) throw new Error('your Google Script is an older version: paste the new Code.gs and deploy a New version');
+          if (j.ok === false) {
+            if (/sign in|token|not allowed/i.test(j.error || '')) throw new Error(j.error);
+            this.mirrorSkipped = (this.mirrorSkipped || 0) + 1; // e.g. a row the sheet doesn't have: skip it, keep going
+          }
+        }
+        q = this.mirrorGet(); q.shift(); this.mirrorPut(q);
+        this.setState({ mirrorWaiting: q.length, mirrorLast: Date.now(), mirrorErr: '' });
+      }
+    } catch (e) {
+      this.setState({ mirrorWaiting: this.mirrorGet().length, mirrorErr: e.message || String(e) });
+    }
+    this.mirroring = false;
   }
   sheetCall(url, params, session) {
     return new Promise((resolve, reject) => {
@@ -2038,6 +2100,7 @@ class Component extends DCLogic {
       this.setState(s => ({ pinNames: names, fbNoAdmin: !d.exists, pinName: s.pinName || lsGet('scanchk.pinname', '') || names[0] || '' }));
     }, () => {});
     this.fbAuth.onAuthStateChanged(async u => {
+      if (u) setTimeout(() => this.mirrorFlush(), 4000);
       if (this.settingUp) return;
       if (!u) { this.fbStop(); this.setState({ authNeeded: true, me: null, data: null, loading: false, session: '', fbReady: true }); return; }
       try {
@@ -2745,7 +2808,7 @@ class Component extends DCLogic {
     this.setProof({ saving: true, error: '' });
     let res = null;
     if (this.state.fbMode) {
-      try { res = this.fbProof(L, o, (p.receiver || '').trim(), p.photo, sig); }
+      try { res = this.fbProof(L, o, (p.receiver || '').trim(), p.photo, sig); this.mirrorAdd({ action: 'proof', invoice: L, customer: o.customer || '', receiver: (p.receiver || '').trim(), photo: p.photo || '', signature: sig }); }
       catch (e) { return this.setProof({ saving: false, error: 'Could not save: ' + fbErr(e) }); }
     } else if (!this.state.demo) {
       const body = JSON.stringify({ action: 'proof', session: this.state.session, invoice: L, customer: o.customer, receiver: (p.receiver || '').trim(), photo: p.photo, signature: sig, device: navigator.userAgent.slice(0, 60) });
@@ -3297,6 +3360,14 @@ class Component extends DCLogic {
           listTitle: names[st.salesPeriod] + (st.salesPay === 'All' ? '' : ' · ' + st.salesPay.toLowerCase()) + ' · ' + list.length + ' invoice' + (list.length === 1 ? '' : 's'),
           listTotal: usd(sum(list)), empty: !list.length, emptyText: all.length ? 'No invoices match.' : 'No invoices yet.' };
       })(),
+      mirror: st.fbMode && !st.demo ? (() => {
+        const n = st.mirrorWaiting != null ? st.mirrorWaiting : this.mirrorGet().length, t = st.mirrorLast ? new Date(st.mirrorLast).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+        const bad = n > 0 && !!st.mirrorErr;
+        return { title: n ? (bad ? '⚠ ' : '') + 'Sheet copy: ' + n + ' change' + (n === 1 ? '' : 's') + ' waiting' : '✓ Sheet copy: up to date',
+          sub: bad ? 'Not reaching the Google Sheet (' + st.mirrorErr + '). Kept on this phone and retried every minute.' : (t ? 'Last sent ' + t + '. ' : '') + 'Scans, deliveries, notes, come-backs and service changes are also written to the claapp sheet.',
+          bg: bad ? 'oklch(0.96 0.03 25)' : n ? '#fff' : 'oklch(0.96 0.04 150)', border: bad ? C.red : n ? '#d6d2c8' : 'oklch(0.6 0.13 150)', fg: bad ? C.red : n ? '#1c1b18' : 'oklch(0.4 0.12 150)',
+          retry: () => this.mirrorFlush() };
+      })() : null,
       truck: (() => {
         // Truck check: every piece of the day's invoices, so nothing is left behind when loading
         if (auth || st.mode !== 'load' || st.locked) return null;
