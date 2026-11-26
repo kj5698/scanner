@@ -1414,7 +1414,7 @@ async function geocodeAddr(a0) {
   } catch (e) { return { res: undefined, waitMs: 1500 }; }
 }
 const saveGeo = geo => { try { const keep = {}; Object.keys(geo).forEach(k => { if (geo[k] && geo[k] !== 'x') keep[k] = geo[k]; }); localStorage.setItem('scanchk.geo', JSON.stringify(keep)); } catch (e) {} };
-const APP_VERSION = '2.9.2', APP_BUILD = '2026-11-25';
+const APP_VERSION = '2.9.3', APP_BUILD = '2026-11-25';
 // Company Firebase project.
 const FIREBASE_PROJECT = {
   apiKey: 'AIzaSyA84AwmdLtLvetEsK1VQ9529KyOFiRBpAk',
@@ -1964,7 +1964,12 @@ class Component extends DCLogic {
   // ---- copy to the Google Sheet while the app runs on Firebase ----
   // Every change made in the app is also sent to the sheet (through the Google Script link), signed with the
   // Firebase sign-in. Changes wait on this phone until the sheet takes them, and are retried every minute.
-  mirrorUrl() { try { return localStorage.getItem('scanchk.url') || SHEET_URL0 || SHEET_URL_DEFAULT; } catch (e) { return SHEET_URL_DEFAULT; } }
+  mirrorUrls() { // every Google Script link this phone knows, the one that worked last first
+    const L = []; const add = u => { if (u && /^https:\/\/script\.google/.test(u) && L.indexOf(u) < 0) L.push(u); };
+    try { add(localStorage.getItem('scanchk.mirrorUrl')); add(localStorage.getItem('scanchk.url')); const c = JSON.parse(localStorage.getItem('scanchk.impcfg') || 'null'); add(c && c.url); } catch (e) {}
+    add(SHEET_URL_DEFAULT); add(SHEET_URL0); return L;
+  }
+  mirrorUrl() { return this.mirrorUrls()[0] || ''; }
   mirrorGet() { try { return JSON.parse(localStorage.getItem('scanchk.mirror') || '[]'); } catch (e) { return []; } }
   mirrorPut(q) {
     try { localStorage.setItem('scanchk.mirror', JSON.stringify(q.slice(-3000))); return true; }
@@ -1988,7 +1993,7 @@ class Component extends DCLogic {
   async mirrorFlush() {
     if (this.mirroring || !this.state.fbMode || this.state.demo) return;
     let q = this.mirrorGet(); if (!q.length) return this.setState({ mirrorWaiting: 0 });
-    const url = this.mirrorUrl(); if (!url) return;
+    let url = this.mirrorUrl(); if (!url) return;
     this.mirroring = true;
     try {
       const u = this.fbAuth && this.fbAuth.currentUser; if (!u) throw new Error('not signed in');
@@ -1998,9 +2003,15 @@ class Component extends DCLogic {
         if (p.action === 'proof') {
           await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...p, fbToken: tok, device: navigator.userAgent.slice(0, 60) }) });
         } else {
-          const j = await this.sheetCall(url, { ...p, fbToken: tok });
-          if (!j) throw new Error('no answer');
-          if (j.invoices || (j.ok === false && j.auth)) throw new Error('the Google Script on this link is still the old version: paste the new Code.gs, run authorize, then Deploy → Manage deployments → Edit → New version');
+          let j = null, used = url, why = '';
+          for (const u2 of this.mirrorUrls()) { // try each known link until one runs the new script
+            try { j = await this.sheetCall(u2, { ...p, fbToken: tok }); } catch (e) { why = e.message; j = null; continue; }
+            if (j && !j.invoices && !(j.ok === false && j.auth)) { used = u2; break; }
+            why = 'old'; j = null;
+          }
+          if (used !== url) { url = used; try { localStorage.setItem('scanchk.mirrorUrl', used); } catch (e) {} }
+          if (!j && why !== 'old') throw new Error(why || 'no answer');
+          if (!j) throw new Error('the Google Script on this link is still the old version: paste the new Code.gs, run authorize, then Deploy → Manage deployments → Edit → New version');
           if (j.ok === false) {
             if (/sign in|token|not allowed/i.test(j.error || '')) throw new Error(j.error);
             this.mirrorSkipped = (this.mirrorSkipped || 0) + 1; // e.g. a row the sheet doesn't have: skip it, keep going
@@ -3364,7 +3375,7 @@ class Component extends DCLogic {
         const n = st.mirrorWaiting != null ? st.mirrorWaiting : this.mirrorGet().length, t = st.mirrorLast ? new Date(st.mirrorLast).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
         const bad = n > 0 && !!st.mirrorErr;
         return { title: n ? (bad ? '⚠ ' : '') + 'Sheet copy: ' + n + ' change' + (n === 1 ? '' : 's') + ' waiting' : '✓ Sheet copy: up to date',
-          sub: bad ? 'Not reaching the Google Sheet (' + st.mirrorErr + '). Kept on this phone and retried every minute.' : (t ? 'Last sent ' + t + '. ' : '') + 'Scans, deliveries, notes, come-backs and service changes are also written to the claapp sheet.',
+          sub: bad ? 'Not reaching the Google Sheet (' + st.mirrorErr + '). Links tried: …' + this.mirrorUrls().map(u => u.replace(/\/exec.*$/, '').slice(-8)).join(', …') + '. Kept on this phone and retried every minute.' : (t ? 'Last sent ' + t + '. ' : '') + 'Scans, deliveries, notes, come-backs and service changes are also written to the claapp sheet.',
           bg: bad ? 'oklch(0.96 0.03 25)' : n ? '#fff' : 'oklch(0.96 0.04 150)', border: bad ? C.red : n ? '#d6d2c8' : 'oklch(0.6 0.13 150)', fg: bad ? C.red : n ? '#1c1b18' : 'oklch(0.4 0.12 150)',
           retry: () => this.mirrorFlush(),
           canBack: !!(st.me && st.me.role === 'admin'), backBtn: st.backBusy ? 'Queued…' : 'Copy last 7 days of scans',
